@@ -2,7 +2,11 @@ import { NextResponse, type NextRequest } from "next/server";
 import { SERVICE_AREA } from "@/lib/constants";
 import { boundingBoxOf } from "@/lib/geo";
 import { nowInTimeZone } from "@/lib/openingHours";
-import { fetchOsmSnapshot, type OsmSnapshot } from "@/lib/overpass";
+import {
+  describeOverpassFailure,
+  fetchOsmSnapshot,
+  type OsmSnapshot,
+} from "@/lib/overpass";
 import {
   assignRouteLabels,
   fastestIsAlsoSafest,
@@ -114,9 +118,9 @@ export async function POST(request: NextRequest) {
   let snapshot: OsmSnapshot | null = null;
   try {
     snapshot = await fetchOsmSnapshot(allPoints);
-  } catch {
+  } catch (error) {
     warnings.push(
-      "OpenStreetMap data (Overpass) is unavailable, so lighting, activity, open-establishment, accessibility and emergency indicators could not be measured for this trip.",
+      `${describeOverpassFailure(error)}, so lighting, activity, open-establishment, accessibility and emergency indicators could not be measured for this trip. Routes and distances below are still real; try again in a minute for the safety indicators.`,
     );
   }
 

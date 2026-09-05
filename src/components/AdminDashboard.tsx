@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { SafeWalkAlertsPanel } from "./SafeWalkAlertsPanel";
 import { ADMIN_TOKEN_HEADER } from "@/lib/constants";
 import { describeOpenState } from "@/lib/openingHours";
 import { VERIFICATION_STATUSES, type SafeHavenApplication, type VerificationStatus } from "@/lib/types";
@@ -184,6 +185,10 @@ export function AdminDashboard() {
 
   return (
     <div className="space-y-5">
+      {/* Pinned above applications: an overdue walk is time-critical, a
+          pending application is not. */}
+      <SafeWalkAlertsPanel token={token} />
+
       {counts && (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
           {VERIFICATION_STATUSES.map((status) => (

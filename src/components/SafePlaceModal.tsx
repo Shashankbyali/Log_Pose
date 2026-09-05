@@ -10,6 +10,7 @@ import type {
   NearbyPlaceOption,
   SafePlaceOption,
   SafePlaceSearchResult,
+  SafeWalkDestinationKind,
   VerifiedSafeHaven,
 } from "@/lib/types";
 
@@ -17,10 +18,25 @@ export interface NavigationTarget {
   lat: number;
   lng: number;
   name: string;
+  /**
+   * Carried through so a Safe Walk knows whether anyone at the destination
+   * can actually be contacted. An OSM place has no LOG POSE relationship.
+   */
+  kind: SafeWalkDestinationKind;
+  /** Set only for verified Safe Havens, so escalation can reach them. */
+  safeHavenId: string | null;
 }
 
 interface SafePlaceModalProps {
-  userLocation: LatLng;
+  /**
+   * Where the trip was planned from. This is the position the user actually
+   * asserted, so it is the default search centre -- LOG POSE does no location
+   * watching, so a stale GPS fix must not silently override it.
+   */
+  tripOrigin: LatLng;
+  tripOriginName: string;
+  /** A device GPS fix, when one is available and the user opts into it. */
+  currentLocation: LatLng | null;
   /** In Demo Mode the predefined places are ranked locally instead of via the API. */
   demoHavens: VerifiedSafeHaven[] | null;
   demoNearbyPlaces: NearbyPlace[] | null;
@@ -32,6 +48,8 @@ type LoadState =
   | { kind: "loading" }
   | { kind: "ready"; result: SafePlaceSearchResult }
   | { kind: "error"; message: string };
+
+type SearchFrom = "trip" | "gps";
 
 const DEMO_SEARCH_RADIUS_METERS = 2500;
 
@@ -109,7 +127,13 @@ function VerifiedCard({
         <button
           type="button"
           onClick={() =>
-            onNavigate({ lat: option.latitude, lng: option.longitude, name: option.name })
+            onNavigate({
+              lat: option.latitude,
+              lng: option.longitude,
+              name: option.name,
+              kind: "verified_haven",
+              safeHavenId: option.id,
+            })
           }
           className="lp-focus mt-3.5 w-full rounded-xl bg-teal-500 py-2.5 text-sm font-semibold text-zinc-950 transition hover:bg-teal-400"
         >
@@ -150,7 +174,13 @@ function NearbyCard({
       <button
         type="button"
         onClick={() =>
-          onNavigate({ lat: option.latitude, lng: option.longitude, name: option.name })
+          onNavigate({
+            lat: option.latitude,
+            lng: option.longitude,
+            name: option.name,
+            kind: "osm_place",
+            safeHavenId: null,
+          })
         }
         className="lp-focus mt-3.5 w-full rounded-xl border border-white/15 py-2.5 text-sm font-medium text-zinc-100 transition hover:bg-white/5"
       >
@@ -192,13 +222,24 @@ function SectionHeading({
  * called Safe Havens.
  */
 export function SafePlaceModal({
-  userLocation,
+  tripOrigin,
+  tripOriginName,
+  currentLocation,
   demoHavens,
   demoNearbyPlaces,
   onClose,
   onNavigate,
 }: SafePlaceModalProps) {
-  const [remoteState, setRemoteState] = useState<LoadState>({ kind: "loading" });
+  const [searchFrom, setSearchFrom] = useState<SearchFrom>("trip");
+
+  const userLocation =
+    searchFrom === "gps" && currentLocation ? currentLocation : tripOrigin;
+  const locationKey = `${userLocation.lat.toFixed(5)},${userLocation.lng.toFixed(5)}`;
+
+  // Results are stored against the location they were fetched for, so
+  // switching the search centre shows the loading state without the effect
+  // having to reset state synchronously.
+  const [remote, setRemote] = useState<{ key: string; state: LoadState } | null>(null);
 
   // Demo Mode ranks its predefined places locally and synchronously, so it is
   // derived rather than fetched.
@@ -218,19 +259,22 @@ export function SafePlaceModal({
     };
   }, [demoHavens, demoNearbyPlaces, userLocation]);
 
-  const state = demoState ?? remoteState;
+  const state: LoadState =
+    demoState ??
+    (remote?.key === locationKey ? remote.state : { kind: "loading" });
 
   useEffect(() => {
     if (demoHavens) return;
 
     const controller = new AbortController();
+    const [lat, lng] = locationKey.split(",").map(Number);
 
     (async () => {
       try {
         const response = await fetch("/api/safe-places", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ location: userLocation }),
+          body: JSON.stringify({ location: { lat, lng } }),
           signal: controller.signal,
         });
         const data = (await response.json()) as SafePlaceSearchResult & {
@@ -238,25 +282,31 @@ export function SafePlaceModal({
         };
 
         if (!response.ok) {
-          setRemoteState({
-            kind: "error",
-            message: data.error ?? "Could not search for nearby places.",
+          setRemote({
+            key: locationKey,
+            state: {
+              kind: "error",
+              message: data.error ?? "Could not search for nearby places.",
+            },
           });
           return;
         }
 
-        setRemoteState({ kind: "ready", result: data });
+        setRemote({ key: locationKey, state: { kind: "ready", result: data } });
       } catch (error) {
         if ((error as Error).name === "AbortError") return;
-        setRemoteState({
-          kind: "error",
-          message: "Could not reach the search service. Check your connection.",
+        setRemote({
+          key: locationKey,
+          state: {
+            kind: "error",
+            message: "Could not reach the search service. Check your connection.",
+          },
         });
       }
     })();
 
     return () => controller.abort();
-  }, [userLocation, demoHavens]);
+  }, [locationKey, demoHavens]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -293,6 +343,26 @@ export function SafePlaceModal({
           >
             &times;
           </button>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/8 bg-white/[0.02] px-5 py-2.5">
+          <p className="min-w-0 text-[11px] text-zinc-400">
+            Searching near{" "}
+            <span className="font-medium text-zinc-200">
+              {searchFrom === "gps" ? "your current location" : tripOriginName}
+            </span>
+          </p>
+          {currentLocation && (
+            <button
+              type="button"
+              onClick={() => setSearchFrom(searchFrom === "gps" ? "trip" : "gps")}
+              className="lp-focus shrink-0 rounded-lg border border-white/15 px-2 py-1 text-[11px] text-zinc-300 transition hover:bg-white/5"
+            >
+              {searchFrom === "gps"
+                ? "Search near trip start"
+                : "Search near my location"}
+            </button>
+          )}
         </div>
 
         <a

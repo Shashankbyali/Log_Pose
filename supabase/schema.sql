@@ -166,6 +166,116 @@ create policy "anyone may apply"
 -- No select/insert/update/delete policies for verification reports, so they
 -- are readable only via the service-role key on the server.
 
+-- =====================================================================
+-- SAFE WALK -- overdue arrival escalation
+--
+-- When someone heads for a safe place, they can start a "Safe Walk": a
+-- deadline is recorded server-side, and if they do not confirm arrival by
+-- then the walk is escalated.
+--
+-- The deadline MUST live here rather than in a browser timer, because a
+-- closed tab or a sleeping phone would otherwise silently cancel the only
+-- safety mechanism the user is relying on.
+--
+-- PRIVACY -- this is the one place LOG POSE stores a location beyond the
+-- current request, and only because an escalation is worthless without
+-- knowing where the person was heading. Accordingly:
+--   * there is no account, no name and no phone number on this row
+--   * the device proves ownership with a random token, nothing identifying
+--   * rows are purged by `purge_expired_safe_walks()` shortly after they
+--     resolve, so this is a short-lived operational record, not history
+-- =====================================================================
+create table if not exists public.safe_walks (
+  id uuid primary key default gen_random_uuid(),
+
+  -- Opaque per-walk secret held only by the originating device. This is the
+  -- sole means of confirming arrival or cancelling, so no account is needed.
+  device_token text not null,
+
+  -- Where they set out from and where they are heading.
+  origin_lat double precision not null,
+  origin_lng double precision not null,
+  destination_lat double precision not null,
+  destination_lng double precision not null,
+  destination_name text not null,
+
+  -- 'verified_haven' escalates to a real Safe Haven we hold contact details
+  -- for. 'osm_place' cannot be contacted by LOG POSE at all, and the UI must
+  -- say so rather than implying someone is expecting the person.
+  destination_kind text not null
+    check (destination_kind in ('verified_haven', 'osm_place')),
+  safe_haven_id uuid references public.safe_havens (id) on delete set null,
+
+  -- Real OSRM walking estimate plus the grace period the user chose.
+  expected_walk_seconds integer not null,
+  grace_seconds integer not null,
+  expected_arrival_at timestamptz not null,
+
+  -- Nearest mapped police station at the time the walk started, captured so
+  -- the escalation does not depend on Overpass being up later. `null` means
+  -- none was mapped nearby -- never a placeholder.
+  police_name text,
+  police_lat double precision,
+  police_lng double precision,
+  police_phone text,
+
+  status text not null default 'active'
+    check (status in ('active', 'arrived', 'overdue', 'cancelled')),
+
+  created_at timestamptz not null default now(),
+  arrived_at timestamptz,
+  overdue_at timestamptz,
+  cancelled_at timestamptz,
+
+  -- Set by the cron sweep so an alert is raised exactly once.
+  escalated_at timestamptz
+);
+
+create index if not exists safe_walks_due_idx
+  on public.safe_walks (status, expected_arrival_at);
+
+-- ---------------------------------------------------------------------
+-- Alerts raised when a Safe Walk goes overdue.
+--
+-- `channel` records what LOG POSE actually did, not what it wishes it could
+-- do. 'dashboard' is the only channel that is genuinely delivered today;
+-- police are NEVER contacted programmatically and no row here may claim
+-- otherwise.
+-- ---------------------------------------------------------------------
+create table if not exists public.safe_walk_alerts (
+  id uuid primary key default gen_random_uuid(),
+  safe_walk_id uuid not null references public.safe_walks (id) on delete cascade,
+  channel text not null check (channel in ('dashboard', 'safe_haven', 'device_handoff')),
+  detail text not null,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists safe_walk_alerts_walk_idx
+  on public.safe_walk_alerts (safe_walk_id);
+
+-- ---------------------------------------------------------------------
+-- Retention: resolved walks are short-lived operational records.
+-- Called by the same cron sweep that raises alerts.
+-- ---------------------------------------------------------------------
+create or replace function public.purge_expired_safe_walks()
+returns void
+language sql
+security definer
+set search_path = public
+as $$
+  delete from public.safe_walks
+  where (status in ('arrived', 'cancelled') and created_at < now() - interval '1 hour')
+     or (status = 'overdue' and created_at < now() - interval '7 days');
+$$;
+
+-- ---------------------------------------------------------------------
+-- RLS: Safe Walks are written and read only through server routes using the
+-- service-role key. A client holding a device token talks to our API, never
+-- to PostgREST directly, so there are deliberately no anon policies here.
+-- ---------------------------------------------------------------------
+alter table public.safe_walks enable row level security;
+alter table public.safe_walk_alerts enable row level security;
+
 -- ---------------------------------------------------------------------
 -- Optional: anonymous, aggregate-only usage counters.
 -- No user identifiers, no locations, no route history.

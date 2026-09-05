@@ -1,7 +1,7 @@
 const PRINCIPLES = [
   "No account and no personal details required",
   "No continuous location tracking",
-  "Your location is used for the current request only, never stored",
+  "Route and place searches are used for that request only, never stored",
   "Finding a Safe Haven does not require your identity",
 ];
 
@@ -23,6 +23,15 @@ export function PrivacyPanel() {
           </li>
         ))}
       </ul>
+
+      <p className="mt-3 border-t border-white/5 pt-3 text-[11px] leading-relaxed text-zinc-500">
+        <span className="font-medium text-zinc-300">One exception:</span> if you
+        start a Safe Walk, your start point and destination are stored until it
+        resolves, because an overdue alert is worthless without knowing where
+        you were heading. Still no name, phone number or account &mdash; and the
+        record is deleted once you arrive or cancel. Your trusted contact&rsquo;s
+        number never leaves your device.
+      </p>
     </div>
   );
 }

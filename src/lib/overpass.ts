@@ -1,4 +1,4 @@
-import { boundingBoxOf } from "./geo";
+import { boundingBoxOf, haversineMeters } from "./geo";
 import type { BoundingBox, LatLng } from "./types";
 
 /**
@@ -117,38 +117,96 @@ function buildQuery(bbox: BoundingBox): string {
 .paths out tags geom 1500;`;
 }
 
+/**
+ * Endpoints that just failed to connect, and when they may be tried again.
+ *
+ * Public Overpass mirrors are routinely unreachable from a given network. Once
+ * one has timed out there is no point paying the full timeout for it again on
+ * every subsequent request -- that turns a single slow mirror into a
+ * multi-minute stall and makes a healthy primary look broken.
+ */
+const unhealthyUntil = new Map<string, number>();
+const UNHEALTHY_COOLDOWN_MS = 5 * 60 * 1000;
+
+/**
+ * Overpass answers 429 when the caller has used up its request slots and 504
+ * when the query timed out server-side. Both mean "busy, come back", not
+ * "broken", so the right response is to wait briefly and ask again rather
+ * than failing over to a different mirror.
+ */
+const TRANSIENT_STATUSES = new Set([429, 504]);
+const TRANSIENT_RETRY_DELAY_MS = 1500;
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function postOverpass(
+  endpoint: string,
+  query: string,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+  return fetch(endpoint, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+      "User-Agent": "LogPose-SafetyNavigation/1.0 (hackathon prototype)",
+    },
+    body: new URLSearchParams({ data: query }).toString(),
+    signal: controller.signal,
+    cache: "no-store",
+  }).finally(() => clearTimeout(timer));
+}
+
 async function runOverpassQuery(
   query: string,
   timeoutMs = OVERPASS_TIMEOUT_MS,
 ): Promise<RawElement[]> {
+  const now = Date.now();
+
+  // Prefer endpoints that are not in cooldown, but never drop one entirely:
+  // if every mirror is cooling down we still try, in original order, rather
+  // than reporting data as unavailable without asking anyone.
+  const healthy = OVERPASS_ENDPOINTS.filter(
+    (endpoint) => (unhealthyUntil.get(endpoint) ?? 0) <= now,
+  );
+  const endpoints = healthy.length > 0 ? healthy : OVERPASS_ENDPOINTS;
+
   let lastError: unknown = null;
 
-  for (const endpoint of OVERPASS_ENDPOINTS) {
-    try {
-      const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), timeoutMs);
+  for (const endpoint of endpoints) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const response = await postOverpass(endpoint, query, timeoutMs);
 
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-          Accept: "application/json",
-          "User-Agent": "LogPose-SafetyNavigation/1.0 (hackathon prototype)",
-        },
-        body: new URLSearchParams({ data: query }).toString(),
-        signal: controller.signal,
-        cache: "no-store",
-      }).finally(() => clearTimeout(timer));
+        if (response.ok) {
+          unhealthyUntil.delete(endpoint);
+          const data = (await response.json()) as { elements?: RawElement[] };
+          return data.elements ?? [];
+        }
 
-      if (!response.ok) {
-        lastError = new Error(`Overpass ${endpoint} responded ${response.status}`);
-        continue;
+        lastError = new Error(
+          `Overpass ${endpoint} responded ${response.status}`,
+        );
+
+        // Busy rather than broken: pause and ask the same mirror again before
+        // giving up on it, since the alternatives are usually worse.
+        if (TRANSIENT_STATUSES.has(response.status) && attempt === 0) {
+          await sleep(TRANSIENT_RETRY_DELAY_MS);
+          continue;
+        }
+
+        break;
+      } catch (error) {
+        // A connection failure or abort: this mirror is unreachable from here.
+        lastError = error;
+        unhealthyUntil.set(endpoint, Date.now() + UNHEALTHY_COOLDOWN_MS);
+        break;
       }
-
-      const data = (await response.json()) as { elements?: RawElement[] };
-      return data.elements ?? [];
-    } catch (error) {
-      lastError = error;
     }
   }
 
@@ -288,7 +346,7 @@ const SHELTER_SHOPS = [
  * waiting on this, so a slow mirror is skipped quickly rather than holding up
  * the verified Safe Haven results that are already in hand.
  */
-const OVERPASS_URGENT_TIMEOUT_MS = 9000;
+const OVERPASS_URGENT_TIMEOUT_MS = 7000;
 
 function buildAroundQuery(center: LatLng, radiusMeters: number): string {
   const around = `around:${Math.round(radiusMeters)},${center.lat},${center.lng}`;
@@ -330,6 +388,78 @@ export async function fetchNearbyShelterCandidates(
   }
 
   return points;
+}
+
+/**
+ * A short, user-facing reason an Overpass lookup failed. Distinguishing "busy"
+ * from "unreachable" matters: the first is worth retrying in a moment, the
+ * second is not, and telling the user "unavailable" for both hides that.
+ */
+export function describeOverpassFailure(error: unknown): string {
+  const message = error instanceof Error ? error.message : "";
+
+  if (message.includes("429")) {
+    return "OpenStreetMap's Overpass service is rate-limiting requests right now";
+  }
+  if (message.includes("504") || message.includes("timeout")) {
+    return "OpenStreetMap's Overpass service timed out on this area";
+  }
+  if (error instanceof Error && error.name === "AbortError") {
+    return "OpenStreetMap's Overpass service did not respond in time";
+  }
+  return "OpenStreetMap's Overpass service could not be reached";
+}
+
+export interface MappedPoliceStation {
+  name: string;
+  lat: number;
+  lng: number;
+  /** Only present when OSM actually maps a phone number. Never invented. */
+  phone: string | null;
+  distanceMeters: number;
+}
+
+/**
+ * Nearest mapped police facility to a point.
+ *
+ * Returns null when Overpass is unreachable OR when no police station is
+ * mapped within the radius -- callers must treat both as "no station to show"
+ * rather than substituting a guess. The phone number is whatever OSM has, if
+ * anything; LOG POSE never fabricates an emergency contact.
+ */
+export async function fetchNearestPoliceStation(
+  center: LatLng,
+  radiusMeters = 5000,
+): Promise<MappedPoliceStation | null> {
+  const around = `around:${Math.round(radiusMeters)},${center.lat},${center.lng}`;
+  const query = `[out:json][timeout:10];
+(
+  nwr["amenity"="police"](${around});
+);
+out tags center 60;`;
+
+  const elements = await runOverpassQuery(query, OVERPASS_URGENT_TIMEOUT_MS);
+
+  let best: MappedPoliceStation | null = null;
+  for (const element of elements) {
+    const point = pointOf(element);
+    if (!point) continue;
+
+    const distanceMeters = Math.round(
+      haversineMeters(center, { lat: point.lat, lng: point.lng }),
+    );
+    if (best && distanceMeters >= best.distanceMeters) continue;
+
+    best = {
+      name: displayName(point.tags),
+      lat: point.lat,
+      lng: point.lng,
+      phone: point.tags.phone ?? point.tags["contact:phone"] ?? null,
+      distanceMeters,
+    };
+  }
+
+  return best;
 }
 
 /** Readable category label from OSM tags, used for map popups. */

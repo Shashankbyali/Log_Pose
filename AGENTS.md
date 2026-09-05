@@ -70,6 +70,41 @@ closed right now, drops categories that are not plausible walk-in spaces,
 weights proximity with a squared falloff, and caps results at 2 per category
 so central Bengaluru does not return eight cafes.
 
+## Safe Walk — overdue arrival escalation
+
+Someone heading to a safe place can start a Safe Walk. The deadline is
+`real OSRM walking time + user-chosen grace`, stored in `public.safe_walks`.
+
+**The deadline must stay server-side.** A browser `setTimeout` is not a safety
+mechanism: a closed tab, a sleeping phone or a dead battery would silently
+cancel the one thing the user is relying on. `/api/cron/safe-walk-sweep` runs
+every minute (`vercel.json`) and is what actually escalates. The countdown in
+`SafeWalkPanel` is only a mirror of that record.
+
+What is actually delivered on overdue, and nothing may claim more:
+
+| Channel | Delivered? |
+| --- | --- |
+| LOG POSE admin dashboard alert | Yes, end to end |
+| Verified Safe Haven contacted | No — contact details are held, but no gateway is wired |
+| Police notified | **Never.** No API exists; the UI says so explicitly |
+| Trusted contact / 112 | Device handoff only: prefilled `sms:` and `tel:` links |
+
+Other invariants:
+
+- No account, name or phone is stored on a walk. Ownership is proved by a
+  random `device_token` returned once and kept in `localStorage`.
+- The trusted contact number lives in `localStorage` only and is never sent
+  to the server.
+- `escalated_at` makes the sweep idempotent; `purge_expired_safe_walks()`
+  deletes resolved walks so location data does not accumulate.
+- If OSRM cannot measure the walk, the Safe Walk is **refused** rather than
+  started against a guessed deadline that would fire at the wrong time.
+- Demo Mode never offers a Safe Walk — the deadline would be based on
+  predefined data.
+- This is the one exception to "location is never stored", and `PrivacyPanel`
+  states it plainly. Do not revert that copy.
+
 ## Design system
 
 Tokens and the `lp-*` utility classes live in `src/app/globals.css`:

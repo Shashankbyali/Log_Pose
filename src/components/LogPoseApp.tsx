@@ -10,6 +10,8 @@ import { SafeHavenDetail } from "./SafeHavenDetail";
 import { SafePlaceModal, type NavigationTarget } from "./SafePlaceModal";
 import { SafetyPreferenceSelector } from "./SafetyPreferenceSelector";
 import { SafetyScorePanel } from "./SafetyScorePanel";
+import { SafeWalkPanel } from "./SafeWalkPanel";
+import { SafeWalkStartDialog, type SafeWalkRequest } from "./SafeWalkStartDialog";
 import {
   DEMO_DESTINATION,
   DEMO_DESTINATION_NAME,
@@ -51,6 +53,7 @@ export default function LogPoseApp() {
   const [selectedRouteId, setSelectedRouteId] = useState("");
   const [selectedHaven, setSelectedHaven] = useState<VerifiedSafeHaven | null>(null);
   const [showSafePlace, setShowSafePlace] = useState(false);
+  const [safeWalkRequest, setSafeWalkRequest] = useState<SafeWalkRequest | null>(null);
   const [showOsmPlaces, setShowOsmPlaces] = useState(true);
   const [panelOpen, setPanelOpen] = useState(true);
 
@@ -187,7 +190,8 @@ export default function LogPoseApp() {
 
     if (trip.plan.mode === "demo") {
       // Demo Mode has no live routing, so say so instead of silently doing
-      // nothing or pretending to route.
+      // nothing or pretending to route. A Safe Walk is deliberately not
+      // offered here: its deadline would be based on demo data.
       setError(
         "Demo Mode uses a predefined route and cannot navigate to another place. Start a live trip to route here.",
       );
@@ -201,6 +205,14 @@ export default function LogPoseApp() {
       trip.originName,
       target.name,
     );
+
+    setSafeWalkRequest({
+      origin: trip.origin,
+      destination: { lat: target.lat, lng: target.lng },
+      destinationName: target.name,
+      destinationKind: target.kind,
+      safeHavenId: target.safeHavenId,
+    });
   };
 
   if (!trip) {
@@ -418,6 +430,8 @@ export default function LogPoseApp() {
           )}
         </div>
 
+        <SafeWalkPanel className="absolute inset-x-4 top-16 z-[1400] mx-auto max-w-sm lg:inset-x-auto lg:right-4 lg:top-4 lg:w-80" />
+
         {selectedHaven && (
           <div className="absolute inset-x-4 bottom-4 z-[1500] mx-auto max-w-sm lg:inset-x-auto lg:left-4 lg:top-20 lg:bottom-auto">
             <SafeHavenDetail
@@ -428,6 +442,8 @@ export default function LogPoseApp() {
                   lat: selectedHaven.latitude,
                   lng: selectedHaven.longitude,
                   name: selectedHaven.name,
+                  kind: "verified_haven",
+                  safeHavenId: selectedHaven.id,
                 })
               }
             />
@@ -446,11 +462,20 @@ export default function LogPoseApp() {
 
       {showSafePlace && (
         <SafePlaceModal
-          userLocation={isDemo ? DEMO_ORIGIN : geo.location ?? trip.origin}
+          tripOrigin={isDemo ? DEMO_ORIGIN : trip.origin}
+          tripOriginName={trip.originName}
+          currentLocation={isDemo ? null : geo.location}
           demoHavens={isDemo ? DEMO_SAFE_HAVENS : null}
           demoNearbyPlaces={isDemo ? DEMO_OSM_PLACES : null}
           onClose={() => setShowSafePlace(false)}
           onNavigate={handleNavigateTo}
+        />
+      )}
+
+      {safeWalkRequest && (
+        <SafeWalkStartDialog
+          request={safeWalkRequest}
+          onClose={() => setSafeWalkRequest(null)}
         />
       )}
     </div>

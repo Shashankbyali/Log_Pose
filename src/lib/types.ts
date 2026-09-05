@@ -279,6 +279,53 @@ export interface NearbyPlaceOption extends NearbyPlace {
   rankScore: number;
 }
 
+export type SafeWalkStatus = "active" | "arrived" | "overdue" | "cancelled";
+
+export type SafeWalkDestinationKind = "verified_haven" | "osm_place";
+
+/** Nearest mapped police station, captured when a Safe Walk starts. */
+export interface PoliceStationSnapshot {
+  name: string;
+  lat: number;
+  lng: number;
+  /** From OSM tags when mapped. LOG POSE never invents a number. */
+  phone: string | null;
+}
+
+/**
+ * A Safe Walk: a server-side arrival deadline for someone heading to a safe
+ * place. Contains no name, phone or account -- ownership is proved by a
+ * per-walk device token that is never returned in listings.
+ */
+export interface SafeWalk {
+  id: string;
+  destinationName: string;
+  destinationKind: SafeWalkDestinationKind;
+  destinationLat: number;
+  destinationLng: number;
+  originLat: number;
+  originLng: number;
+  expectedWalkSeconds: number;
+  graceSeconds: number;
+  expectedArrivalAt: string;
+  status: SafeWalkStatus;
+  createdAt: string;
+  arrivedAt: string | null;
+  overdueAt: string | null;
+  police: PoliceStationSnapshot | null;
+}
+
+/** What LOG POSE actually did when a walk went overdue. */
+export type SafeWalkAlertChannel = "dashboard" | "safe_haven" | "device_handoff";
+
+export interface SafeWalkAlert {
+  id: string;
+  safeWalkId: string;
+  channel: SafeWalkAlertChannel;
+  detail: string;
+  createdAt: string;
+}
+
 /** Response of the "I need a safe place" endpoint. */
 export interface SafePlaceSearchResult {
   /** Verified Safe Havens, or null when the network could not be read. */

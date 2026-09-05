@@ -3,6 +3,7 @@ import { boundingBoxOf } from "@/lib/geo";
 import { nowInTimeZone, resolveOpenState } from "@/lib/openingHours";
 import {
   categoryLabel,
+  describeOverpassFailure,
   displayName,
   fetchNearbyShelterCandidates,
   isEmergencyFacility,
@@ -49,12 +50,34 @@ const WALKING_ROUTE_LIMIT = 3;
  * this screen, so a slow Overpass mirror is abandoned and reported as
  * unavailable rather than making them stare at a spinner.
  */
-const NEARBY_BUDGET_MS = 14000;
+const NEARBY_BUDGET_MS = 22000;
 
-function withDeadline<T>(promise: Promise<T>, ms: number): Promise<T | null> {
+/**
+ * Races a lookup against a deadline, keeping the reason it failed so the UI
+ * can say "rate-limited" or "timed out" rather than a flat "unavailable".
+ */
+function withDeadline<T>(
+  promise: Promise<T>,
+  ms: number,
+  onFailure: (error: unknown) => string,
+): Promise<{ value: T | null; failure: string | null }> {
   return Promise.race([
-    promise.catch(() => null),
-    new Promise<null>((resolve) => setTimeout(() => resolve(null), ms)),
+    promise
+      .then((value) => ({ value, failure: null }))
+      .catch((error: unknown) => ({
+        value: null,
+        failure: onFailure(error),
+      })),
+    new Promise<{ value: null; failure: string }>((resolve) =>
+      setTimeout(
+        () =>
+          resolve({
+            value: null,
+            failure: "OpenStreetMap did not respond in time",
+          }),
+        ms,
+      ),
+    ),
   ]);
 }
 
@@ -114,7 +137,7 @@ export async function POST(request: NextRequest) {
 
   // Both sources are queried together: the unverified fallback is useful even
   // when the verified network responds, because it may simply be empty here.
-  const [network, osmCandidates] = await Promise.all([
+  const [network, nearbyLookup] = await Promise.all([
     getVerifiedSafeHavens(
       boundingBoxOf([userLocation], VERIFIED_RADIUS_METERS + 500),
       now,
@@ -122,8 +145,11 @@ export async function POST(request: NextRequest) {
     withDeadline(
       fetchNearbyShelterCandidates(userLocation, NEARBY_RADIUS_METERS),
       NEARBY_BUDGET_MS,
+      describeOverpassFailure,
     ),
   ]);
+
+  const osmCandidates = nearbyLookup.value;
 
   let verified: SafePlaceOption[] | null = null;
   if (network.havens !== null) {
@@ -165,7 +191,7 @@ export async function POST(request: NextRequest) {
     nearby: nearbyWithWalking,
     nearbyWarning:
       osmCandidates === null
-        ? "OpenStreetMap did not respond in time, so nearby establishments could not be listed."
+        ? `${nearbyLookup.failure ?? "OpenStreetMap could not be reached"}, so nearby establishments could not be listed. Try again in a moment.`
         : null,
     searchRadiusMeters: VERIFIED_RADIUS_METERS,
   };
