@@ -125,11 +125,9 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const { data, error } = await supabase
+  const { error } = await supabase
     .from("safe_havens")
     .insert(toSafeHavenRow(input))
-    .select("id")
-    .single();
 
   if (error) {
     return NextResponse.json(
@@ -140,7 +138,6 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json(
     {
-      id: data.id,
       status: "pending",
       message:
         "Application received. Our team will review it and schedule a physical verification visit before any LOG POSE Safe Haven designation is granted.",

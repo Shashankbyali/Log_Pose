@@ -5,7 +5,7 @@
 Built by **Straw Hats**.
 
 Navigation apps optimise for getting you there. **LOG POSE adds a safety
-intelligence layer** so you can choose *how* you get there — comparing real
+intelligence layer** so you can choose _how_ you get there — comparing real
 walking routes in Bengaluru using mapped street lighting, nearby activity,
 pedestrian infrastructure, emergency access, and a **physically verified Safe
 Haven network**.
@@ -16,23 +16,23 @@ Haven network**.
 
 Live Mode never fabricates a number.
 
-| Indicator | Real source |
-| --- | --- |
-| Walking routes & ETA | OSRM `foot` profile (FOSSGIS / OpenStreetMap.de) |
-| Destination search | Nominatim (OpenStreetMap) |
-| Street lighting | OSM `highway=street_lamp` within 40 m of the route |
-| Human activity | OSM establishments within 60 m of the route |
-| Open establishments | OSM `opening_hours`, parsed in Asia/Kolkata |
-| Pedestrian accessibility | OSM footways, sidewalks, crossings |
-| Emergency access | Distance to mapped hospitals, police, fire, clinics |
-| Safe Haven availability | LOG POSE verified network (Supabase) |
+| Indicator                | Real source                                         |
+| ------------------------ | --------------------------------------------------- |
+| Walking routes & ETA     | OSRM `foot` profile (FOSSGIS / OpenStreetMap.de)    |
+| Destination search       | Nominatim (OpenStreetMap)                           |
+| Street lighting          | OSM `highway=street_lamp` within 40 m of the route  |
+| Human activity           | OSM establishments within 60 m of the route         |
+| Open establishments      | OSM `opening_hours`, parsed in Asia/Kolkata         |
+| Pedestrian accessibility | OSM footways, sidewalks, crossings                  |
+| Emergency access         | Distance to mapped hospitals, police, fire, clinics |
+| Safe Haven availability  | LOG POSE verified network (Supabase)                |
 
 When a source is unavailable the indicator reports **"Data unavailable"** and is
 **excluded from the score with the remaining weights renormalised** — missing
 data is never silently converted to zero, and never replaced with mock values.
 
 A missing OSM street lamp does not mean there is no lamp, so all lighting
-wording is *"based on mapped street-light infrastructure"*.
+wording is _"based on mapped street-light infrastructure"_.
 
 Demo Mode is always available and always labelled `DEMO MODE`. Its data is
 predefined and never mixed with Live Mode data.
@@ -55,7 +55,7 @@ Safety Score = 0.25 x Lighting
 ```
 
 Every factor exposes the measurement behind it, e.g.
-*"90 mapped street lamps along route (15.5/km)"*.
+_"90 mapped street lamps along route (15.5/km)"_.
 
 **LOG POSE never claims a route is safe.** Safety is probabilistic and
 data-dependent.
@@ -103,14 +103,14 @@ work with zero configuration.**
 
 All optional. See `.env.example`.
 
-| Variable | Needed for |
-| --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Verified Safe Haven network |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Verified Safe Haven network |
-| `SUPABASE_SERVICE_ROLE_KEY` | `/admin` workflow — **server only** |
-| `ADMIN_TOKEN` | `/admin` login — **server only** |
-| `NEXT_PUBLIC_OSRM_URL` | Override the walking router |
-| `OVERPASS_URL` | Override the Overpass endpoint |
+| Variable                        | Needed for                          |
+| ------------------------------- | ----------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | Verified Safe Haven network         |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Verified Safe Haven network         |
+| `SUPABASE_SERVICE_ROLE_KEY`     | `/admin` workflow — **server only** |
+| `ADMIN_TOKEN`                   | `/admin` login — **server only**    |
+| `NEXT_PUBLIC_OSRM_URL`          | Override the walking router         |
+| `OVERPASS_URL`                  | Override the Overpass endpoint      |
 
 Without Supabase, the app still routes and scores; Safe Haven availability is
 honestly reported as unavailable.
@@ -140,8 +140,8 @@ npm i -g vercel && vercel
 Or import the repo at [vercel.com/new](https://vercel.com/new).
 
 1. Framework preset: **Next.js** (detected automatically).
-2. Set the environment variables above in *Project Settings → Environment
-   Variables*. Add `SUPABASE_SERVICE_ROLE_KEY` and `ADMIN_TOKEN` **without** the
+2. Set the environment variables above in _Project Settings → Environment
+   Variables_. Add `SUPABASE_SERVICE_ROLE_KEY` and `ADMIN_TOKEN` **without** the
    `NEXT_PUBLIC_` prefix so they stay server-side.
 3. Deploy.
 
