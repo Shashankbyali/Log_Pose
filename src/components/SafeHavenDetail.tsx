@@ -1,23 +1,12 @@
 "use client";
 
-import { describeOpenState } from "@/lib/openingHours";
+import { OpenStatePill, VerifiedBadge } from "./PlaceBadges";
 import type { VerifiedSafeHaven } from "@/lib/types";
 
 interface SafeHavenDetailProps {
   haven: VerifiedSafeHaven;
   onClose: () => void;
   onNavigate: () => void;
-}
-
-export function VerifiedBadge() {
-  return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-teal-400/30 bg-teal-400/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-teal-300">
-      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 17.6l-5.9 3.1 1.2-6.6L2.5 9.5l6.6-.9z" />
-      </svg>
-      LOG POSE Safe Haven
-    </span>
-  );
 }
 
 export function SafeHavenFacilities({ haven }: { haven: VerifiedSafeHaven }) {
@@ -58,7 +47,7 @@ export function SafeHavenFacilities({ haven }: { haven: VerifiedSafeHaven }) {
 
 export function SafeHavenDetail({ haven, onClose, onNavigate }: SafeHavenDetailProps) {
   return (
-    <div className="rounded-2xl border border-teal-400/25 bg-zinc-900/95 p-4 shadow-2xl backdrop-blur-md">
+    <div className="lp-glass lp-fade-up rounded-2xl border-teal-400/25 p-4 shadow-2xl">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <VerifiedBadge />
@@ -80,18 +69,18 @@ export function SafeHavenDetail({ haven, onClose, onNavigate }: SafeHavenDetailP
         </button>
       </div>
 
-      <div className="mt-3 flex items-center gap-4 rounded-xl bg-white/[0.04] px-3 py-2.5">
+      <div className="mt-3 flex items-center gap-4 rounded-xl border border-white/8 bg-white/[0.04] px-3 py-2.5">
         <div>
-          <p className="text-lg font-semibold tabular-nums text-teal-300">
+          <p className="text-xl font-semibold leading-none tabular-nums text-teal-300">
             {haven.trustScore}
           </p>
-          <p className="text-[10px] uppercase tracking-wider text-zinc-500">
+          <p className="mt-1 text-[10px] uppercase tracking-wider text-zinc-500">
             Trust Score
           </p>
         </div>
-        <div className="border-l border-white/10 pl-4">
-          <p className="text-sm text-zinc-200">{describeOpenState(haven.openState)}</p>
-          <p className="text-[11px] text-zinc-500">
+        <div className="min-w-0 border-l border-white/10 pl-4">
+          <OpenStatePill state={haven.openState} />
+          <p className="mt-1 truncate text-[11px] text-zinc-500">
             {haven.is247 ? "Open 24/7" : haven.openingHours || "Hours not listed"}
           </p>
         </div>

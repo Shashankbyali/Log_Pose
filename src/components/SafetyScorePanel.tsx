@@ -1,7 +1,8 @@
 "use client";
 
+import { ScoreRing } from "./ScoreRing";
 import { DEFAULT_SAFETY_WEIGHTS } from "@/lib/safetyEngine";
-import { cn, describeScore, formatScore, getScoreBarColor, getScoreColor } from "@/lib/utils";
+import { cn, describeScore, getScoreBarColor, getScoreColor } from "@/lib/utils";
 import type { SafetyFactorScores } from "@/lib/types";
 
 interface SafetyScorePanelProps {
@@ -19,35 +20,29 @@ export function SafetyScorePanel({ safety, routeSourceNote }: SafetyScorePanelPr
   const coveragePercent = Math.round(safety.dataCoverage * 100);
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-900/50 p-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+    <section className="lp-card p-4">
+      <div className="flex items-center gap-4">
+        <ScoreRing score={safety.totalScore} size={72} strokeWidth={6} caption="/100" />
+        <div className="min-w-0">
           <h3 className="text-sm font-semibold text-white">Safety Score</h3>
-          <p className="text-xs text-zinc-500">
-            {describeScore(safety.totalScore)} based on available data
-          </p>
-        </div>
-        <div className="text-right">
           <p
             className={cn(
-              "text-3xl font-semibold tabular-nums",
+              "text-sm font-medium",
               getScoreColor(safety.totalScore),
             )}
           >
-            {formatScore(safety.totalScore)}
+            {describeScore(safety.totalScore)}
           </p>
-          <p className="text-[10px] uppercase tracking-wider text-zinc-500">
-            out of 100
+          <p className="mt-0.5 text-[11px] leading-snug text-zinc-500">
+            Weighted over {coveragePercent}% of the model that could be measured
           </p>
         </div>
       </div>
 
-      {coveragePercent < 100 && (
-        <p className="mt-3 rounded-lg border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-xs text-amber-200/90">
-          {coveragePercent}% of the scoring model could be measured for this route.
-          {safety.unavailableFactors.length > 0 && (
-            <> Unavailable: {safety.unavailableFactors.join(", ")}.</>
-          )}
+      {coveragePercent < 100 && safety.unavailableFactors.length > 0 && (
+        <p className="mt-3 rounded-lg border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-xs leading-relaxed text-amber-200/90">
+          Not measured for this route: {safety.unavailableFactors.join(", ")}. These are
+          excluded from the score rather than counted as zero.
         </p>
       )}
 
@@ -79,11 +74,20 @@ export function SafetyScorePanel({ safety, routeSourceNote }: SafetyScorePanelPr
                 </p>
               </div>
 
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/5">
+              <div
+                className={cn(
+                  "mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/5",
+                  factor.score === null &&
+                    "bg-[repeating-linear-gradient(45deg,rgba(255,255,255,0.05)_0_5px,transparent_5px_10px)]",
+                )}
+              >
                 {factor.score !== null && (
                   <div
                     className={cn("h-full rounded-full", getScoreBarColor(factor.score))}
-                    style={{ width: `${factor.score}%` }}
+                    style={{
+                      width: `${factor.score}%`,
+                      transition: "width 500ms cubic-bezier(0.22,1,0.36,1)",
+                    }}
                   />
                 )}
               </div>

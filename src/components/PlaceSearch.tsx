@@ -92,7 +92,7 @@ export function PlaceSearch({
 
   if (selected) {
     return (
-      <div className="flex items-start justify-between gap-3 rounded-xl border border-teal-400/30 bg-teal-400/5 px-4 py-3">
+      <div className="lp-fade-up flex items-start justify-between gap-3 rounded-xl border border-teal-400/30 bg-teal-400/[0.06] px-4 py-3">
         <div className="min-w-0">
           <p className="text-[11px] uppercase tracking-wider text-teal-300/80">
             {label}
@@ -131,7 +131,7 @@ export function PlaceSearch({
         placeholder={placeholder}
         autoComplete="off"
         aria-describedby={`${listId}-status`}
-        className="w-full rounded-xl border border-white/10 bg-zinc-950/60 px-4 py-3.5 text-white placeholder:text-zinc-500 focus:border-teal-400/50 focus:outline-none focus:ring-2 focus:ring-teal-400/20 disabled:opacity-50"
+        className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3.5 text-white transition placeholder:text-zinc-500 focus:border-teal-400/50 focus:bg-black/45 focus:outline-none focus:ring-2 focus:ring-teal-400/20 disabled:opacity-50"
       />
 
       <p id={`${listId}-status`} className="mt-1.5 min-h-4 text-xs text-zinc-500">
@@ -146,7 +146,10 @@ export function PlaceSearch({
       </p>
 
       {searchable && results.length > 0 && (
-        <ul className="mt-1 max-h-64 space-y-1 overflow-y-auto" role="listbox">
+        <ul
+          className="lp-scroll lp-fade-up mt-1 max-h-64 space-y-0.5 overflow-y-auto rounded-xl border border-white/8 bg-black/25 p-1"
+          role="listbox"
+        >
           {results.map((result) => (
             <li key={result.id}>
               <button
@@ -155,7 +158,7 @@ export function PlaceSearch({
                   setResults([]);
                   onSelect(result);
                 }}
-                className="w-full rounded-xl px-3 py-2.5 text-left transition hover:bg-white/5"
+                className="lp-focus w-full rounded-lg px-3 py-2.5 text-left transition hover:bg-white/5"
               >
                 <span className="block truncate text-sm font-medium text-zinc-100">
                   {result.name}

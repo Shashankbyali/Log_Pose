@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo } from "react";
+import { Fragment, useEffect, useMemo } from "react";
 import {
   MapContainer,
   Marker,
@@ -30,9 +30,9 @@ const ROUTE_COLORS: Record<RouteLabel, string> = {
 function dotIcon(color: string) {
   return L.divIcon({
     className: "",
-    html: `<div style="width:16px;height:16px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 2px 8px rgba(0,0,0,.45)"></div>`,
-    iconSize: [16, 16],
-    iconAnchor: [8, 8],
+    html: `<div style="width:18px;height:18px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 0 0 4px ${color}33,0 2px 10px rgba(0,0,0,.5)"></div>`,
+    iconSize: [18, 18],
+    iconAnchor: [9, 9],
   });
 }
 
@@ -133,10 +133,16 @@ export default function LogPoseMap({
         scrollWheelZoom
         zoomControl
       >
+        {/*
+          Standard OSM raster tiles filtered to a dark palette in CSS, so the
+          map matches the app without swapping to a keyed tile provider. Route
+          lines and markers are separate overlays and stay true-colour.
+        */}
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           maxZoom={19}
+          className="lp-dark-tiles"
         />
 
         <FitBounds points={boundsPoints} />
@@ -148,18 +154,30 @@ export default function LogPoseMap({
           )
           .map((route) => {
             const selected = route.id === selectedRouteId;
+            const positions = route.geometry.coordinates.map(
+              (c) => [c.lat, c.lng] as [number, number],
+            );
             return (
-              <Polyline
-                key={route.id}
-                positions={route.geometry.coordinates.map(
-                  (c) => [c.lat, c.lng] as [number, number],
-                )}
-                pathOptions={{
-                  color: ROUTE_COLORS[route.label] ?? "#94a3b8",
-                  weight: selected ? 6 : 3,
-                  opacity: selected ? 0.95 : 0.3,
-                }}
-              />
+              <Fragment key={route.id}>
+                {/* Dark casing underneath keeps the line legible over the map. */}
+                <Polyline
+                  positions={positions}
+                  interactive={false}
+                  pathOptions={{
+                    color: "#04070c",
+                    weight: selected ? 10 : 6,
+                    opacity: selected ? 0.6 : 0.25,
+                  }}
+                />
+                <Polyline
+                  positions={positions}
+                  pathOptions={{
+                    color: ROUTE_COLORS[route.label] ?? "#94a3b8",
+                    weight: selected ? 6 : 3,
+                    opacity: selected ? 0.95 : 0.35,
+                  }}
+                />
+              </Fragment>
             );
           })}
 

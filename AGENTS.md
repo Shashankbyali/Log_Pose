@@ -40,13 +40,50 @@ loader from the event handler instead.
 3. **`safetyEngine.ts` and `trustScore.ts` must stay pure** — no fetching, no
    randomness, no `Date.now()`. Pass a `ClockNow` in for time-dependent logic.
 4. **OSM establishments are not Safe Havens.** Grey neutral markers, labelled
-   "Source: OpenStreetMap / Not LOG POSE Verified".
+   "Source: OpenStreetMap / Not LOG POSE Verified". They *may* be offered in
+   "I need a safe place" as a clearly separated fallback section (see below),
+   but never merged into the verified list, never given a Trust Score and
+   never called a Safe Haven.
 5. **Safe Havens require physical verification.** Approval is blocked until a
    field verification is recorded. Trust Score is calculated and returns 0 for
    anything not `verified`. It is enforced in the API, a DB `BEFORE INSERT`
    trigger, and RLS.
 6. **Never claim safety.** Use "Safety Score", "safer route", "based on
    available data". Never "100% safe" or guaranteed.
+
+## "I need a safe place" — two-tier results
+
+`/api/safe-places` returns two independent groups, never one blended list:
+
+- `verified` — ranked Safe Havens. `null` means the Supabase network could not
+  be read (see `verifiedWarning`); `[]` means "genuinely none nearby".
+- `nearby` — unverified OSM establishments within 1.2 km, from
+  `fetchNearbyShelterCandidates`. `null` means Overpass timed out (see
+  `nearbyWarning`).
+
+Because they are separate fields, an outage in one source can never look like
+"nothing found" in the other. The endpoint no longer 503s when Supabase is
+unconfigured — the OSM fallback still works.
+
+`rankNearbyPlaces` (pure, in `safePlaceRanking.ts`) drops places OSM says are
+closed right now, drops categories that are not plausible walk-in spaces,
+weights proximity with a squared falloff, and caps results at 2 per category
+so central Bengaluru does not return eight cafes.
+
+## Design system
+
+Tokens and the `lp-*` utility classes live in `src/app/globals.css`:
+`lp-card`, `lp-glass`, `lp-ambient`, `lp-gradient-text`, `lp-scroll`,
+`lp-skeleton`, `lp-fade-up`, `lp-sheet-in`, `lp-focus`. All animations are
+disabled under `prefers-reduced-motion`.
+
+The dark basemap is the standard OSM raster tile with the `.lp-dark-tiles` CSS
+filter — no keyed tile provider. Route polylines and markers are separate
+overlays, so they keep their true colour.
+
+Verified and unverified provenance badges live in `PlaceBadges.tsx` and are
+deliberately different in colour *and* shape (solid teal pill vs dashed slate
+box) so they cannot be confused at a glance.
 
 ## Gotchas discovered
 

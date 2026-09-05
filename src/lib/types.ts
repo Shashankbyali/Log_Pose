@@ -251,3 +251,41 @@ export interface SafePlaceOption extends VerifiedSafeHaven {
   walkingDurationSeconds: number | null;
   rankScore: number;
 }
+
+/**
+ * An OpenStreetMap establishment offered as a fallback when the verified Safe
+ * Haven network has nothing nearby.
+ *
+ * This is NOT a Safe Haven: nobody from LOG POSE has visited it, it has no
+ * Trust Score, and it has made no commitment to assist. Everything here is
+ * copied from OSM tags, never inferred.
+ */
+export interface NearbyPlace {
+  id: string;
+  name: string;
+  /** Human-readable OSM category, e.g. "Pharmacy". */
+  category: string;
+  latitude: number;
+  longitude: number;
+  openState: OpenState;
+  openingHoursRaw: string | null;
+  isEmergencyFacility: boolean;
+}
+
+export interface NearbyPlaceOption extends NearbyPlace {
+  distanceMeters: number;
+  walkingDistanceMeters: number | null;
+  walkingDurationSeconds: number | null;
+  rankScore: number;
+}
+
+/** Response of the "I need a safe place" endpoint. */
+export interface SafePlaceSearchResult {
+  /** Verified Safe Havens, or null when the network could not be read. */
+  verified: SafePlaceOption[] | null;
+  verifiedWarning: string | null;
+  /** Unverified OSM fallback, or null when OpenStreetMap could not be read. */
+  nearby: NearbyPlaceOption[] | null;
+  nearbyWarning: string | null;
+  searchRadiusMeters: number;
+}

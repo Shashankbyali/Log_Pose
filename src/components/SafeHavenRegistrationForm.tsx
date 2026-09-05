@@ -50,7 +50,7 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-white/10 bg-zinc-900/50 p-5">
+    <section className="lp-card p-5">
       <h2 className="text-sm font-semibold text-white">{title}</h2>
       {description && (
         <p className="mt-1 text-xs leading-relaxed text-zinc-500">{description}</p>

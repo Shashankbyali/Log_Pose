@@ -7,7 +7,7 @@ import { MapWrapper } from "./MapWrapper";
 import { DemoModeBanner } from "./ModeBadge";
 import { RouteComparisonCards } from "./RouteComparisonCards";
 import { SafeHavenDetail } from "./SafeHavenDetail";
-import { SafePlaceModal } from "./SafePlaceModal";
+import { SafePlaceModal, type NavigationTarget } from "./SafePlaceModal";
 import { SafetyPreferenceSelector } from "./SafetyPreferenceSelector";
 import { SafetyScorePanel } from "./SafetyScorePanel";
 import {
@@ -15,6 +15,7 @@ import {
   DEMO_DESTINATION_NAME,
   DEMO_ORIGIN,
   DEMO_ORIGIN_NAME,
+  DEMO_OSM_PLACES,
   DEMO_SAFE_HAVENS,
   getDemoPlan,
 } from "@/lib/demoData";
@@ -178,30 +179,33 @@ export default function LogPoseApp() {
     );
   };
 
-  const handleNavigateToHaven = (haven: VerifiedSafeHaven) => {
+  const handleNavigateTo = (target: NavigationTarget) => {
     if (!trip) return;
 
     setShowSafePlace(false);
     setSelectedHaven(null);
 
     if (trip.plan.mode === "demo") {
-      // Demo Mode has no live routing; keep the labelled demo trip as-is.
-      setError(null);
+      // Demo Mode has no live routing, so say so instead of silently doing
+      // nothing or pretending to route.
+      setError(
+        "Demo Mode uses a predefined route and cannot navigate to another place. Start a live trip to route here.",
+      );
       return;
     }
 
     setPreference("safest");
     void planLiveRoute(
       trip.origin,
-      { lat: haven.latitude, lng: haven.longitude },
+      { lat: target.lat, lng: target.lng },
       trip.originName,
-      haven.name,
+      target.name,
     );
   };
 
   if (!trip) {
     return (
-      <div className="flex min-h-[100dvh] flex-col bg-zinc-950">
+      <div className="lp-ambient flex min-h-[100dvh] flex-col">
         <Header />
         <HomeScreen
           origin={origin}
@@ -237,7 +241,7 @@ export default function LogPoseApp() {
   const isDemo = trip.plan.mode === "demo";
 
   return (
-    <div className="flex h-[100dvh] flex-col bg-zinc-950">
+    <div className="lp-ambient flex h-[100dvh] flex-col">
       <Header mode={trip.plan.mode} compact />
       <DemoModeBanner visible={isDemo} />
 
@@ -261,7 +265,7 @@ export default function LogPoseApp() {
               setTrip(null);
               setError(null);
             }}
-            className="absolute left-3 top-3 z-[1000] rounded-xl border border-white/10 bg-zinc-950/85 px-3 py-2 text-sm text-white backdrop-blur-md"
+            className="lp-glass lp-focus absolute left-3 top-3 z-[1000] rounded-xl px-3 py-2 text-sm font-medium text-white transition hover:bg-white/5"
           >
             &larr; New trip
           </button>
@@ -271,7 +275,7 @@ export default function LogPoseApp() {
               type="button"
               onClick={() => setShowOsmPlaces((value) => !value)}
               aria-pressed={showOsmPlaces}
-              className="absolute right-3 top-3 z-[1000] rounded-xl border border-white/10 bg-zinc-950/85 px-3 py-2 text-xs text-zinc-200 backdrop-blur-md"
+              className="lp-glass lp-focus absolute right-3 top-3 z-[1000] rounded-xl px-3 py-2 text-xs text-zinc-200 transition hover:bg-white/5"
             >
               {showOsmPlaces ? "Hide" : "Show"} OSM places
             </button>
@@ -280,32 +284,38 @@ export default function LogPoseApp() {
           <button
             type="button"
             onClick={() => setShowSafePlace(true)}
-            className="absolute bottom-4 left-1/2 z-[1000] -translate-x-1/2 rounded-full bg-rose-600 px-6 py-3.5 text-sm font-semibold text-white shadow-lg shadow-rose-950/40 transition hover:bg-rose-500"
+            className="lp-focus group absolute bottom-4 left-1/2 z-[1000] flex -translate-x-1/2 items-center gap-2.5 rounded-full bg-gradient-to-r from-rose-600 to-rose-500 px-6 py-3.5 text-sm font-semibold text-white shadow-xl shadow-rose-950/50 transition hover:from-rose-500 hover:to-rose-400"
           >
+            <span
+              className="lp-pulse-ring relative h-2 w-2 rounded-full bg-white text-white/70"
+              aria-hidden="true"
+            />
             I need a safe place
           </button>
         </div>
 
-        <div className="relative z-10 flex min-h-0 flex-1 flex-col border-t border-white/10 bg-zinc-950 lg:flex-none lg:w-[420px] lg:border-l lg:border-t-0">
+        <div className="relative z-10 flex min-h-0 flex-1 flex-col border-t border-white/10 bg-[var(--surface-1)] lg:flex-none lg:w-[420px] lg:border-l lg:border-t-0">
           <button
             type="button"
             onClick={() => setPanelOpen((value) => !value)}
             aria-expanded={panelOpen}
-            className="w-full shrink-0 py-2 text-xs text-zinc-500 lg:hidden"
+            className="w-full shrink-0 py-2 text-xs text-zinc-500 transition hover:text-zinc-300 lg:hidden"
           >
+            <span className="mx-auto mb-1.5 block h-1 w-9 rounded-full bg-white/15" />
             {panelOpen ? "Hide details" : "Show details"}
           </button>
 
           {panelOpen && (
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
-              <div>
-                <p className="text-[11px] uppercase tracking-wider text-zinc-500">
+            <div className="lp-scroll min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+              <div className="lp-card p-3.5">
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-zinc-500">
                   Route to
                 </p>
-                <p className="truncate font-medium text-white">
+                <p className="mt-0.5 truncate font-medium text-white">
                   {trip.destinationName}
                 </p>
-                <p className="truncate text-xs text-zinc-500">
+                <p className="mt-1.5 flex items-center gap-1.5 truncate text-xs text-zinc-500">
+                  <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-sky-400" />
                   From {trip.originName}
                 </p>
               </div>
@@ -351,24 +361,34 @@ export default function LogPoseApp() {
 
               {trip.plan.safeHavens.length > 0 && (
                 <section className="rounded-2xl border border-teal-400/20 bg-teal-400/[0.04] p-4">
-                  <h3 className="text-sm font-semibold text-white">
-                    Verified Safe Havens along the way
-                  </h3>
-                  <ul className="mt-2.5 space-y-2">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-sm font-semibold text-white">
+                      Verified Safe Havens along the way
+                    </h3>
+                    <span className="rounded-md bg-teal-400/15 px-1.5 py-0.5 text-[11px] font-semibold tabular-nums text-teal-300">
+                      {trip.plan.safeHavens.length}
+                    </span>
+                  </div>
+                  <ul className="mt-2.5 space-y-1">
                     {trip.plan.safeHavens.slice(0, 5).map((haven) => (
                       <li key={haven.id}>
                         <button
                           type="button"
                           onClick={() => setSelectedHaven(haven)}
-                          className="w-full rounded-xl px-2 py-1.5 text-left transition hover:bg-white/5"
+                          className="lp-focus flex w-full items-center gap-2.5 rounded-xl px-2 py-2 text-left transition hover:bg-white/5"
                         >
-                          <span className="block truncate text-xs font-medium text-zinc-100">
-                            {haven.name}
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg border border-teal-400/30 bg-teal-400/10 text-[11px] font-semibold tabular-nums text-teal-300">
+                            {haven.trustScore}
                           </span>
-                          <span className="block text-[11px] text-zinc-500">
-                            Trust {haven.trustScore}
-                            {haven.distanceFromRoute !== undefined &&
-                              ` \u00b7 ${haven.distanceFromRoute} m from route`}
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-xs font-medium text-zinc-100">
+                              {haven.name}
+                            </span>
+                            <span className="block text-[11px] text-zinc-500">
+                              {haven.type}
+                              {haven.distanceFromRoute !== undefined &&
+                                ` \u00b7 ${haven.distanceFromRoute} m from route`}
+                            </span>
                           </span>
                         </button>
                       </li>
@@ -403,7 +423,13 @@ export default function LogPoseApp() {
             <SafeHavenDetail
               haven={selectedHaven}
               onClose={() => setSelectedHaven(null)}
-              onNavigate={() => handleNavigateToHaven(selectedHaven)}
+              onNavigate={() =>
+                handleNavigateTo({
+                  lat: selectedHaven.latitude,
+                  lng: selectedHaven.longitude,
+                  name: selectedHaven.name,
+                })
+              }
             />
           </div>
         )}
@@ -422,8 +448,9 @@ export default function LogPoseApp() {
         <SafePlaceModal
           userLocation={isDemo ? DEMO_ORIGIN : geo.location ?? trip.origin}
           demoHavens={isDemo ? DEMO_SAFE_HAVENS : null}
+          demoNearbyPlaces={isDemo ? DEMO_OSM_PLACES : null}
           onClose={() => setShowSafePlace(false)}
-          onNavigate={handleNavigateToHaven}
+          onNavigate={handleNavigateTo}
         />
       )}
     </div>

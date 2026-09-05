@@ -1,7 +1,8 @@
 "use client";
 
+import { ScoreRing } from "./ScoreRing";
 import { formatDistance, formatDuration } from "@/lib/geo";
-import { cn, formatScore, getScoreColor } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { RouteLabel, ScoredRoute } from "@/lib/types";
 
 interface RouteComparisonCardsProps {
@@ -23,6 +24,14 @@ const LABEL_ACCENT: Record<RouteLabel, string> = {
   balanced: "text-violet-300 border-violet-400/30 bg-violet-400/10",
   safest: "text-emerald-300 border-emerald-400/30 bg-emerald-400/10",
   alternative: "text-zinc-300 border-white/15 bg-white/5",
+};
+
+/** Matches the polyline colours on the map, so cards and routes read together. */
+const LABEL_STRIPE: Record<RouteLabel, string> = {
+  fastest: "bg-sky-400",
+  balanced: "bg-violet-400",
+  safest: "bg-emerald-400",
+  alternative: "bg-zinc-500",
 };
 
 export function RouteComparisonCards({
@@ -52,12 +61,19 @@ export function RouteComparisonCards({
             aria-checked={isSelected}
             onClick={() => onSelect(route.id)}
             className={cn(
-              "w-full rounded-2xl border p-3.5 text-left transition",
-              isSelected
-                ? "border-white/25 bg-white/[0.07]"
-                : "border-white/10 bg-zinc-900/50 hover:border-white/20",
+              "lp-card lp-card-interactive lp-focus relative w-full overflow-hidden p-3.5 pl-5 text-left",
+              isSelected && "border-white/25 bg-white/[0.06]",
             )}
           >
+            <span
+              className={cn(
+                "absolute inset-y-0 left-0 w-1 transition-opacity",
+                LABEL_STRIPE[route.label],
+                isSelected ? "opacity-100" : "opacity-35",
+              )}
+              aria-hidden="true"
+            />
+
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-1.5">
@@ -76,25 +92,24 @@ export function RouteComparisonCards({
                   )}
                 </div>
 
-                <p className="mt-2 text-sm text-zinc-200">
+                <p className="mt-2 text-base font-medium text-zinc-100">
                   {formatDuration(route.duration)}
-                  <span className="text-zinc-500"> &middot; </span>
-                  {formatDistance(route.distance)}
+                  <span className="text-sm font-normal text-zinc-500">
+                    {" "}
+                    &middot; {formatDistance(route.distance)}
+                  </span>
                 </p>
 
-                <p className="mt-1.5 line-clamp-2 text-xs text-zinc-500">
+                <p className="mt-1.5 line-clamp-2 text-xs leading-snug text-zinc-500">
                   {route.safety.reasons.slice(0, 2).join(" \u00b7 ")}
                 </p>
               </div>
 
-              <div className="shrink-0 text-right">
-                <p className={cn("text-2xl font-semibold tabular-nums", getScoreColor(score))}>
-                  {formatScore(score)}
-                </p>
-                <p className="text-[10px] uppercase tracking-wider text-zinc-500">
-                  {score === null ? "No data" : "Safety Score"}
-                </p>
-              </div>
+              <ScoreRing
+                score={score}
+                size={56}
+                caption={score === null ? "no data" : "score"}
+              />
             </div>
           </button>
         );

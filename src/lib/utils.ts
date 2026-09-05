@@ -43,6 +43,14 @@ export function getScoreBarColor(score: number | null): string {
   return "bg-orange-500";
 }
 
+/** Same thresholds as the text/bar colours, for SVG strokes. */
+export function getScoreHex(score: number | null): string {
+  if (score === null) return "#52525b";
+  if (score >= 70) return "#34d399";
+  if (score >= 45) return "#fbbf24";
+  return "#fb923c";
+}
+
 /** Wording that never overstates certainty. */
 export function describeScore(score: number | null): string {
   if (score === null) return "Not enough data";

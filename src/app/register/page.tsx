@@ -20,7 +20,7 @@ const WORKFLOW = [
 
 export default function RegisterPage() {
   return (
-    <div className="min-h-[100dvh] bg-zinc-950">
+    <div className="lp-ambient min-h-[100dvh]">
       <Header compact />
 
       <main className="mx-auto w-full max-w-2xl px-4 py-6">
@@ -33,7 +33,7 @@ export default function RegisterPage() {
           designation on its own.
         </p>
 
-        <div className="mt-5 rounded-2xl border border-white/10 bg-zinc-900/50 p-5">
+        <div className="lp-card mt-5 p-5">
           <h2 className="text-sm font-semibold text-white">
             How verification works
           </h2>

@@ -37,10 +37,10 @@ export function SafetyPreferenceSelector({
             aria-checked={selected}
             onClick={() => onChange(option.value)}
             className={cn(
-              "rounded-xl border px-3 py-3 text-left transition-all",
+              "lp-focus rounded-xl border px-3 py-3 text-left transition-all",
               selected
-                ? "border-teal-400/60 bg-teal-500/15 shadow-[0_0_20px_rgba(45,212,191,0.15)]"
-                : "border-white/10 bg-white/5 hover:border-white/20 hover:bg-white/8",
+                ? "border-teal-400/55 bg-gradient-to-b from-teal-400/18 to-teal-500/8 shadow-[0_0_22px_rgba(45,212,191,0.16)]"
+                : "border-white/10 bg-white/[0.03] hover:border-white/20 hover:bg-white/[0.06]",
             )}
           >
             <span

@@ -1,9 +1,35 @@
 @import "tailwindcss";
 @import "leaflet/dist/leaflet.css";
 
+/*
+ * LOG POSE design tokens.
+ *
+ * One dark navy-teal system: a deep base, three raised surface steps and a
+ * single brand accent. Semantic colours (verified / unverified / demo /
+ * warning) are fixed here so a verified Safe Haven and an unverified
+ * OpenStreetMap place can never accidentally be styled the same way.
+ */
 :root {
-  --background: #09090b;
-  --foreground: #fafafa;
+  --background: #07080c;
+  --foreground: #f4f4f5;
+
+  --surface-1: #0d0f15;
+  --surface-2: #14171f;
+  --surface-3: #1c2029;
+
+  --hairline: rgba(255, 255, 255, 0.08);
+  --hairline-strong: rgba(255, 255, 255, 0.16);
+
+  /* Brand: the compass needle. */
+  --brand: #2dd4bf;
+  --brand-dim: #0d9488;
+  --brand-glow: rgba(45, 212, 191, 0.18);
+
+  /* Verified Safe Haven vs unverified OSM place: never the same hue. */
+  --verified: #2dd4bf;
+  --unverified: #94a3b8;
+  --caution: #fbbf24;
+  --danger: #fb7185;
 }
 
 @theme inline {
@@ -17,19 +43,215 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Ambient aurora behind the app shell. Purely decorative. */
+.lp-ambient {
+  position: relative;
+  isolation: isolate;
+}
+
+.lp-ambient::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60rem 32rem at 12% -8%, rgba(45, 212, 191, 0.1), transparent 60%),
+    radial-gradient(48rem 28rem at 92% 4%, rgba(99, 102, 241, 0.09), transparent 62%);
+}
+
+/* Raised card with a soft top highlight, the default container everywhere. */
+.lp-card {
+  border: 1px solid var(--hairline);
+  border-radius: 1.25rem;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0) 45%),
+    var(--surface-1);
+}
+
+.lp-card-interactive {
+  transition:
+    border-color 160ms ease,
+    background-color 160ms ease,
+    transform 160ms ease;
+}
+
+.lp-card-interactive:hover {
+  border-color: var(--hairline-strong);
+  transform: translateY(-1px);
+}
+
+.lp-glass {
+  border: 1px solid var(--hairline);
+  background: rgba(13, 15, 21, 0.82);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+/* Brand gradient text, used sparingly for the wordmark and hero. */
+.lp-gradient-text {
+  background: linear-gradient(100deg, #ffffff 10%, var(--brand) 55%, #7dd3fc 95%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.lp-focus:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 2px;
+}
+
+@keyframes lp-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lp-fade-up {
+  animation: lp-fade-up 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes lp-sheet-in {
+  from {
+    opacity: 0;
+    transform: translateY(24px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.lp-sheet-in {
+  animation: lp-sheet-in 240ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes lp-pulse-ring {
+  0% {
+    opacity: 0.55;
+    transform: scale(0.9);
+  }
+  70% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+.lp-pulse-ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  background: currentColor;
+  animation: lp-pulse-ring 2.4s ease-out infinite;
+}
+
+@keyframes lp-shimmer {
+  from {
+    background-position: -160% 0;
+  }
+  to {
+    background-position: 160% 0;
+  }
+}
+
+/* Loading placeholder. Never used to stand in for real data values. */
+.lp-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface-2) 0%,
+    var(--surface-3) 50%,
+    var(--surface-2) 100%
+  );
+  background-size: 220% 100%;
+  animation: lp-shimmer 1.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .lp-fade-up,
+  .lp-sheet-in,
+  .lp-skeleton,
+  .lp-pulse-ring::after {
+    animation: none;
+  }
+
+  .lp-card-interactive:hover {
+    transform: none;
+  }
+}
+
+/* Scrollbars inside panels, so the dark UI stays dark. */
+.lp-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--surface-3) transparent;
+}
+
+.lp-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.lp-scroll::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: var(--surface-3);
+}
+
+.lp-scroll::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .leaflet-container {
   font-family: inherit;
-  background: #18181b;
+  background: #0d0f15;
+}
+
+/*
+ * Dark basemap without changing tile provider: invert the standard OSM raster
+ * tiles and rotate the hue back so greens and blues stay recognisable. Route
+ * polylines and markers are separate overlays, so they keep their true colour.
+ */
+.lp-dark-tiles {
+  filter: invert(1) hue-rotate(180deg) brightness(0.92) contrast(0.9) saturate(0.65);
 }
 
 .leaflet-popup-content-wrapper {
-  border-radius: 12px;
-  background: #18181b;
-  color: #fafafa;
+  border-radius: 14px;
+  background: var(--surface-2);
+  color: var(--foreground);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
 }
 
 .leaflet-popup-tip {
-  background: #18181b;
+  background: var(--surface-2);
+}
+
+.leaflet-control-zoom a {
+  background: var(--surface-2) !important;
+  color: var(--foreground) !important;
+  border-color: var(--hairline) !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background: var(--surface-3) !important;
+}
+
+.leaflet-control-attribution {
+  background: rgba(7, 8, 12, 0.75) !important;
+  color: #71717a !important;
+}
+
+.leaflet-control-attribution a {
+  color: #a1a1aa !important;
 }

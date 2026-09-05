@@ -117,13 +117,16 @@ function buildQuery(bbox: BoundingBox): string {
 .paths out tags geom 1500;`;
 }
 
-async function runOverpassQuery(query: string): Promise<RawElement[]> {
+async function runOverpassQuery(
+  query: string,
+  timeoutMs = OVERPASS_TIMEOUT_MS,
+): Promise<RawElement[]> {
   let lastError: unknown = null;
 
   for (const endpoint of OVERPASS_ENDPOINTS) {
     try {
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), OVERPASS_TIMEOUT_MS);
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
 
       const response = await fetch(endpoint, {
         method: "POST",
@@ -240,6 +243,93 @@ export async function fetchOsmSnapshot(
   }
 
   return snapshot;
+}
+
+/**
+ * Amenity/shop/tourism values that are plausible places to head towards when a
+ * pedestrian needs to get off the street: staffed, indoors and publicly
+ * enterable. This is a filter on OSM categories only -- it is NOT a safety
+ * judgement about the individual establishment, which is exactly why these are
+ * never presented as verified LOG POSE Safe Havens.
+ */
+const SHELTER_AMENITIES = [
+  "police",
+  "fire_station",
+  "hospital",
+  "clinic",
+  "doctors",
+  "pharmacy",
+  "fuel",
+  "bank",
+  "bus_station",
+  "cafe",
+  "restaurant",
+  "fast_food",
+  "library",
+  "community_centre",
+  "townhall",
+  "place_of_worship",
+  "cinema",
+  "theatre",
+  "college",
+  "university",
+];
+
+const SHELTER_SHOPS = [
+  "convenience",
+  "supermarket",
+  "mall",
+  "department_store",
+  "chemist",
+];
+
+/**
+ * Tighter than the trip query. Someone tapping "I need a safe place" is
+ * waiting on this, so a slow mirror is skipped quickly rather than holding up
+ * the verified Safe Haven results that are already in hand.
+ */
+const OVERPASS_URGENT_TIMEOUT_MS = 9000;
+
+function buildAroundQuery(center: LatLng, radiusMeters: number): string {
+  const around = `around:${Math.round(radiusMeters)},${center.lat},${center.lng}`;
+  const amenityRegex = SHELTER_AMENITIES.join("|");
+  const shopRegex = SHELTER_SHOPS.join("|");
+
+  return `[out:json][timeout:10];
+(
+  nwr["amenity"~"^(${amenityRegex})$"](${around});
+  nwr["shop"~"^(${shopRegex})$"](${around});
+  nwr["tourism"~"^(hotel|guest_house|hostel|motel)$"](${around});
+  nwr["healthcare"](${around});
+  nwr["emergency"="ambulance_station"](${around});
+);
+out tags center 300;`;
+}
+
+/**
+ * Publicly enterable OSM establishments within `radiusMeters` of a point, used
+ * as the unverified fallback for "I need a safe place" when the verified Safe
+ * Haven network has nothing nearby.
+ *
+ * Throws when Overpass is unreachable; callers must report that as unavailable
+ * rather than inventing places.
+ */
+export async function fetchNearbyShelterCandidates(
+  center: LatLng,
+  radiusMeters: number,
+): Promise<OverpassPoint[]> {
+  const elements = await runOverpassQuery(
+    buildAroundQuery(center, radiusMeters),
+    OVERPASS_URGENT_TIMEOUT_MS,
+  );
+  const points: OverpassPoint[] = [];
+
+  for (const element of elements) {
+    const point = pointOf(element);
+    if (point) points.push(point);
+  }
+
+  return points;
 }
 
 /** Readable category label from OSM tags, used for map popups. */

@@ -44,17 +44,24 @@ export function HomeScreen({
 }: HomeScreenProps) {
   return (
     <main className="mx-auto flex w-full max-w-lg flex-1 flex-col gap-5 px-4 py-6">
-      <div>
-        <h1 className="text-[22px] font-semibold leading-tight text-white">
+      <div className="lp-fade-up">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-teal-400/25 bg-teal-400/8 px-2.5 py-1 text-[11px] font-medium text-teal-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-teal-400" />
+          Walking navigation &middot; Bengaluru
+        </span>
+        <h1 className="mt-3 text-[26px] font-semibold leading-[1.15] text-white">
           Navigation apps get you there.
+          <br />
+          <span className="lp-gradient-text">LOG POSE cares how.</span>
         </h1>
-        <p className="mt-1 text-sm leading-relaxed text-zinc-400">
-          LOG POSE adds a safety intelligence layer so you can choose{" "}
-          <span className="text-zinc-200">how</span> you get there.
+        <p className="mt-2 text-sm leading-relaxed text-zinc-400">
+          Compare walking routes by measured safety indicators &mdash; lighting,
+          activity, open establishments, pedestrian paths and emergency access &mdash;
+          not just by ETA.
         </p>
       </div>
 
-      <div className="rounded-3xl border border-white/10 bg-zinc-900/60 p-5">
+      <div className="lp-card lp-fade-up p-5">
         <form
           onSubmit={(event) => {
             event.preventDefault();
@@ -126,8 +133,11 @@ export function HomeScreen({
           <button
             type="submit"
             disabled={loading || !destination || !origin}
-            className="w-full rounded-xl bg-teal-500 py-3.5 text-base font-semibold text-zinc-950 transition hover:bg-teal-400 disabled:cursor-not-allowed disabled:opacity-40"
+            className="lp-focus flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-400 to-teal-500 py-3.5 text-base font-semibold text-zinc-950 shadow-lg shadow-teal-950/40 transition hover:from-teal-300 hover:to-teal-400 disabled:cursor-not-allowed disabled:from-zinc-700 disabled:to-zinc-700 disabled:text-zinc-400 disabled:shadow-none"
           >
+            {loading && (
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-900/30 border-t-zinc-900" />
+            )}
             {loading ? "Measuring routes..." : "Compare routes"}
           </button>
 
@@ -155,18 +165,27 @@ export function HomeScreen({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-white/10 bg-zinc-900/50 p-4">
-        <h2 className="text-sm font-semibold text-white">
-          Verified Safe Haven network
-        </h2>
-        <p className="mt-1 text-xs leading-relaxed text-zinc-400">
+      <div className="lp-card lp-fade-up p-4">
+        <div className="flex items-center gap-2">
+          <span className="flex h-7 w-7 items-center justify-center rounded-lg border border-teal-400/25 bg-teal-400/10 text-teal-300">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+              <path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 17.6l-5.9 3.1 1.2-6.6L2.5 9.5l6.6-.9z" />
+            </svg>
+          </span>
+          <h2 className="text-sm font-semibold text-white">
+            Verified Safe Haven network
+          </h2>
+        </div>
+        <p className="mt-2 text-xs leading-relaxed text-zinc-400">
           A business does not become a LOG POSE Safe Haven by registering. It
           must pass a physical verification visit by our team before receiving
-          the verified designation.
+          the verified designation. Where the network has no coverage yet, LOG
+          POSE will show nearby OpenStreetMap establishments instead &mdash;
+          clearly marked as unverified.
         </p>
         <Link
           href="/register"
-          className="mt-3 inline-block rounded-xl border border-white/15 px-3.5 py-2 text-xs font-medium text-zinc-100 transition hover:bg-white/5"
+          className="lp-focus mt-3 inline-block rounded-xl border border-white/15 px-3.5 py-2 text-xs font-medium text-zinc-100 transition hover:border-white/25 hover:bg-white/5"
         >
           Register your establishment as a Safe Haven
         </Link>
