@@ -10,26 +10,27 @@
  * OpenStreetMap place can never accidentally be styled the same way.
  */
 :root {
-  --background: #07080c;
-  --foreground: #f4f4f5;
+  --background: #06131a;
+  --foreground: #edf8f5;
 
-  --surface-1: #0d0f15;
-  --surface-2: #14171f;
-  --surface-3: #1c2029;
+  --surface-1: #0a2028;
+  --surface-2: #0e2b33;
+  --surface-3: #153a40;
 
-  --hairline: rgba(255, 255, 255, 0.08);
-  --hairline-strong: rgba(255, 255, 255, 0.16);
+  --hairline: rgba(173, 224, 214, 0.16);
+  --hairline-strong: rgba(214, 169, 87, 0.42);
 
-  /* Brand: the compass needle. */
-  --brand: #2dd4bf;
-  --brand-dim: #0d9488;
-  --brand-glow: rgba(45, 212, 191, 0.18);
+  /* Brand: a brass compass needle over deep ocean glass. */
+  --brand: #d6a957;
+  --brand-dim: #a87932;
+  --brand-glow: rgba(214, 169, 87, 0.2);
+  --cyan: #64d6d0;
 
   /* Verified Safe Haven vs unverified OSM place: never the same hue. */
-  --verified: #2dd4bf;
-  --unverified: #94a3b8;
-  --caution: #fbbf24;
-  --danger: #fb7185;
+  --verified: #64d6d0;
+  --unverified: #a5b8ba;
+  --caution: #e7bd64;
+  --danger: #f27d78;
 }
 
 @theme inline {
@@ -40,10 +41,34 @@
 }
 
 body {
-  background: var(--background);
+  min-height: 100%;
+  background:
+    radial-gradient(900px 500px at 50% -15%, rgba(100, 214, 208, 0.11), transparent 70%),
+    linear-gradient(145deg, #06131a 0%, #081b23 52%, #06131a 100%);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(214, 169, 87, 0.35);
+  color: var(--foreground);
+}
+
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.lp-ambient::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  opacity: 0.18;
+  background-image: linear-gradient(rgba(100, 214, 208, 0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(100, 214, 208, 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: linear-gradient(to bottom, black, transparent 78%);
 }
 
 /* Ambient aurora behind the app shell. Purely decorative. */
@@ -68,8 +93,10 @@ body {
   border: 1px solid var(--hairline);
   border-radius: 1.25rem;
   background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0) 45%),
-    var(--surface-1);
+    linear-gradient(145deg, rgba(100, 214, 208, 0.075), transparent 38%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0) 48%),
+    rgba(10, 32, 40, 0.9);
+  box-shadow: 0 18px 50px rgba(0, 8, 12, 0.24), inset 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .lp-card-interactive {
@@ -86,9 +113,10 @@ body {
 
 .lp-glass {
   border: 1px solid var(--hairline);
-  background: rgba(13, 15, 21, 0.82);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  background: rgba(6, 24, 31, 0.82);
+  box-shadow: 0 12px 36px rgba(0, 8, 12, 0.2), inset 0 1px rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 /* Brand gradient text, used sparingly for the wordmark and hero. */
@@ -97,6 +125,196 @@ body {
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;
+}
+
+.lp-gradient-text-animated {
+  background-image: linear-gradient(
+    105deg,
+    #7dd3fc 0%,
+    #d6a957 18%,
+    #fff7d6 32%,
+    #64d6d0 48%,
+    #7dd3fc 64%,
+    #d6a957 82%,
+    #fff7d6 100%
+  );
+  background-size: 320% 100%;
+  animation: lp-gradient-sweep 6s ease-in-out infinite;
+  will-change: background-position, filter;
+}
+
+.lp-loading-status {
+  position: relative;
+  display: inline-flex;
+  min-width: 13.5rem;
+  height: 1.5rem;
+  align-items: center;
+  justify-content: center;
+}
+
+.lp-loading-status > span {
+  position: absolute;
+  opacity: 0;
+  animation: lp-loading-status 6.4s ease-in-out infinite;
+  white-space: nowrap;
+}
+
+.lp-loading-status > span:nth-child(2) { animation-delay: 1.6s; }
+.lp-loading-status > span:nth-child(3) { animation-delay: 3.2s; }
+.lp-loading-status > span:nth-child(4) { animation-delay: 4.8s; }
+
+@keyframes lp-loading-status {
+  0%, 5% { opacity: 0; transform: translateY(4px); }
+  10%, 22% { opacity: 1; transform: translateY(0); }
+  27%, 100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes lp-gradient-sweep {
+  0%, 100% {
+    background-position: 0% 50%;
+    filter: drop-shadow(0 0 0 rgba(100, 214, 208, 0));
+  }
+  35% {
+    background-position: 52% 50%;
+    filter: drop-shadow(0 0 14px rgba(100, 214, 208, 0.18));
+  }
+  68% {
+    background-position: 100% 50%;
+    filter: drop-shadow(0 0 18px rgba(214, 169, 87, 0.2));
+  }
+}
+
+/* A quiet 3D route motif gives the desktop home screen a visual anchor. */
+.lp-orbit-scene {
+  position: absolute;
+  top: 28%;
+  left: 50%;
+  width: min(78vw, 980px);
+  aspect-ratio: 1;
+  opacity: 0.78;
+  transform-style: preserve-3d;
+  perspective: 900px;
+  filter: brightness(1.25) drop-shadow(0 28px 42px rgba(0, 0, 0, 0.32));
+}
+
+.lp-orbit-scene::before,
+.lp-orbit-scene::after {
+  content: "";
+  position: absolute;
+  inset: 16%;
+  border-radius: 50%;
+  border: 1px solid rgba(100, 214, 208, 0.12);
+  transform: translateZ(-34px);
+}
+
+.lp-orbit-scene::after {
+  inset: 29%;
+  border-color: rgba(214, 169, 87, 0.2);
+  transform: translateZ(-70px);
+}
+
+.lp-orbit,
+.lp-route-line,
+.lp-orbit-core,
+.lp-route-node {
+  position: absolute;
+  transform-style: preserve-3d;
+}
+
+.lp-orbit {
+  inset: 6%;
+  border: 1px solid rgba(100, 214, 208, 0.26);
+  border-radius: 50%;
+  box-shadow: 0 0 26px rgba(100, 214, 208, 0.08), inset 0 0 20px rgba(100, 214, 208, 0.06);
+}
+
+.lp-orbit::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg, transparent 0deg 300deg, rgba(255, 255, 255, 0.05) 316deg, #fff 328deg, rgba(100, 214, 208, 0.85) 340deg, transparent 354deg);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 2px), #000 calc(100% - 1px));
+  animation: lp-light-run 4.2s linear infinite;
+}
+
+.lp-orbit-one { animation: lp-spin 22s linear infinite; }
+.lp-orbit-two { inset: 18%; border-color: rgba(214, 169, 87, 0.34); animation: lp-spin-reverse 16s linear infinite; }
+.lp-orbit-three { inset: 32%; border-style: dashed; border-color: rgba(125, 211, 252, 0.28); animation: lp-spin 12s linear infinite; }
+
+.lp-route-line {
+  height: 1px;
+  transform-origin: left center;
+  background: linear-gradient(90deg, transparent, rgba(100, 214, 208, 0.75), rgba(214, 169, 87, 0.3), transparent);
+  box-shadow: 0 0 10px rgba(100, 214, 208, 0.35);
+}
+
+.lp-route-line-one { top: 42%; left: 12%; width: 76%; transform: rotate(24deg) translateZ(18px); }
+.lp-route-line-two { top: 66%; left: 18%; width: 65%; transform: rotate(-33deg) translateZ(8px); }
+
+.lp-orbit-core {
+  inset: 39%;
+  border: 1px solid rgba(214, 169, 87, 0.7);
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.95), rgba(214, 169, 87, 0.8) 12%, rgba(9, 29, 34, 0.9) 48%, rgba(6, 19, 26, 0.7));
+  box-shadow: 0 0 30px rgba(214, 169, 87, 0.35), 0 0 80px rgba(100, 214, 208, 0.12);
+  transform: translateZ(42px);
+  animation: lp-core-float 4s ease-in-out infinite;
+}
+
+.lp-core-cross { position: absolute; background: rgba(255, 255, 255, 0.68); }
+.lp-core-cross-horizontal { top: 50%; left: 20%; width: 60%; height: 1px; }
+.lp-core-cross-vertical { top: 20%; left: 50%; width: 1px; height: 60%; }
+.lp-core-dot { position: absolute; inset: 45%; border-radius: 50%; background: #fff; box-shadow: 0 0 10px #fff; }
+
+.lp-route-node { width: 9px; height: 9px; border: 2px solid var(--cyan); border-radius: 50%; background: var(--background); box-shadow: 0 0 16px rgba(100, 214, 208, 0.85); }
+.lp-route-node-one { top: 14%; left: 27%; transform: translateZ(28px); }
+.lp-route-node-two { top: 24%; right: 11%; transform: translateZ(10px); border-color: var(--brand); box-shadow: 0 0 16px rgba(214, 169, 87, 0.8); }
+.lp-route-node-three { bottom: 17%; left: 18%; transform: translateZ(20px); }
+.lp-route-node-four { right: 18%; bottom: 28%; transform: translateZ(4px); border-color: #7dd3fc; box-shadow: 0 0 16px rgba(125, 211, 252, 0.75); }
+
+@keyframes lp-spin { to { transform: rotateZ(360deg); } }
+@keyframes lp-spin-reverse { to { transform: rotateZ(-360deg); } }
+@keyframes lp-core-float { 50% { transform: translateZ(58px); } }
+@keyframes lp-light-run { to { transform: rotate(360deg); } }
+
+.lp-scroll-drift {
+  transform: translate3d(-50%, -50%, 0) rotateX(58deg) rotateZ(-18deg);
+  transition: filter 300ms ease;
+}
+
+.lp-scroll-reveal {
+  animation: lp-scroll-reveal linear both;
+  animation-timeline: view();
+  animation-range: entry 0% cover 28%;
+}
+
+@keyframes lp-scroll-reveal {
+  from { opacity: 0.35; transform: translateY(28px); }
+  to { opacity: 1; transform: none; }
+}
+
+@supports (animation-timeline: scroll()) {
+  .lp-scroll-drift {
+    animation: lp-scroll-drift linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 70%;
+  }
+}
+
+@keyframes lp-scroll-drift {
+  from {
+    transform: translate3d(-50%, -50%, 0) rotateX(58deg) rotateZ(-18deg) scale(1);
+    opacity: 0.72;
+  }
+  45% {
+    opacity: 0.9;
+  }
+  to {
+    transform: translate3d(-50%, -58%, 0) rotateX(58deg) rotateZ(22deg) scale(1.16);
+    opacity: 0.82;
+  }
 }
 
 .lp-focus:focus-visible {
@@ -117,6 +335,12 @@ body {
 
 .lp-fade-up {
   animation: lp-fade-up 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.lp-fade-up.lp-scroll-reveal {
+  animation: lp-scroll-reveal linear both;
+  animation-timeline: view();
+  animation-range: entry 0% cover 28%;
 }
 
 @keyframes lp-sheet-in {
@@ -190,6 +414,16 @@ body {
   .lp-card-interactive:hover {
     transform: none;
   }
+
+  .lp-orbit,
+  .lp-orbit-core,
+  .lp-orbit::after,
+  .lp-scroll-drift,
+  .lp-scroll-reveal,
+  .lp-gradient-text-animated,
+  .lp-loading-status > span {
+    animation: none;
+  }
 }
 
 /* Scrollbars inside panels, so the dark UI stays dark. */
@@ -214,7 +448,15 @@ body {
 
 .leaflet-container {
   font-family: inherit;
-  background: #0d0f15;
+  background: var(--surface-1);
+  border: 1px solid rgba(100, 214, 208, 0.14);
+}
+
+.leaflet-control-zoom {
+  border: 1px solid var(--hairline) !important;
+  border-radius: 12px !important;
+  overflow: hidden;
+  box-shadow: 0 8px 22px rgba(0, 8, 12, 0.35) !important;
 }
 
 /*

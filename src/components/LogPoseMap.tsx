@@ -176,9 +176,9 @@ export default function LogPoseMap({
                   positions={positions}
                   interactive={false}
                   pathOptions={{
-                    color: "#04070c",
-                    weight: selected ? 10 : 6,
-                    opacity: selected ? 0.6 : 0.25,
+                    color: "#031016",
+                    weight: selected ? 12 : 7,
+                    opacity: selected ? 0.82 : 0.38,
                   }}
                 />
                 <Polyline

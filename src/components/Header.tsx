@@ -10,7 +10,7 @@ interface HeaderProps {
 
 export function Header({ mode = null, compact = false }: HeaderProps) {
   return (
-    <header className="lp-glass sticky top-0 z-[1200] flex items-center justify-between gap-3 border-x-0 border-t-0 px-4 py-3">
+    <header className="lp-glass sticky top-0 z-[1200] flex items-center justify-between gap-3 border-x-0 border-t-0 px-4 py-3 sm:px-6">
       <Link href="/" className="lp-focus group flex items-center gap-2.5 rounded-lg">
         <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-teal-400/25 bg-teal-400/10 text-teal-300 transition group-hover:border-teal-400/45 group-hover:bg-teal-400/15">
           <Logo size={compact ? 20 : 22} />
