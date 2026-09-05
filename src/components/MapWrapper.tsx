@@ -27,6 +27,7 @@ interface MapWrapperProps {
   osmPlaces: OsmPlace[];
   showOsmPlaces: boolean;
   onHavenSelect: (haven: VerifiedSafeHaven) => void;
+  onEmergencyFacilitySelect: (place: OsmPlace) => void;
   className?: string;
 }
 

@@ -36,6 +36,7 @@ export function SafetyPreferenceSelector({
             role="radio"
             aria-checked={selected}
             onClick={() => onChange(option.value)}
+            suppressHydrationWarning
             className={cn(
               "lp-focus rounded-xl border px-3 py-3 text-left transition-all",
               selected

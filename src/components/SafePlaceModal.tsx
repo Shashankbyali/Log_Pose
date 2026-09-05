@@ -1,9 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { OpenStatePill, UnverifiedBadge, VerifiedBadge } from "./PlaceBadges";
-import { formatDistance, formatDuration } from "@/lib/geo";
+import {
+  EmergencyAccessBadge,
+  OpenStatePill,
+  UnverifiedBadge,
+  VerifiedBadge,
+} from "./PlaceBadges";
+import { formatDistance } from "@/lib/geo";
 import { rankNearbyPlaces, rankSafePlaces } from "@/lib/safePlaceRanking";
+import { formatWalkingEta } from "@/lib/walkingEta";
 import type {
   LatLng,
   NearbyPlace,
@@ -65,7 +71,7 @@ function DistanceLine({
   if (walkingDistanceMeters !== null && walkingDurationSeconds !== null) {
     return (
       <span className="text-zinc-200">
-        {formatDuration(walkingDurationSeconds)} walk
+        {formatWalkingEta(walkingDurationSeconds)} walk
         <span className="text-zinc-600"> &middot; </span>
         {formatDistance(walkingDistanceMeters)}
       </span>
@@ -74,8 +80,8 @@ function DistanceLine({
 
   return (
     <span className="text-zinc-200">
-      {formatDistance(distanceMeters)}
-      <span className="text-zinc-500"> straight line</span>
+      ETA unavailable
+      <span className="text-zinc-500"> &middot; {formatDistance(distanceMeters)} straight line</span>
     </span>
   );
 }
@@ -155,13 +161,13 @@ function NearbyCard({
     <li className="lp-fade-up rounded-2xl border border-white/8 bg-white/[0.02] p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <UnverifiedBadge />
+          <div className="flex flex-wrap gap-1.5">
+            <UnverifiedBadge />
+            {option.isEmergencyFacility && <EmergencyAccessBadge />}
+          </div>
           <p className="mt-2 truncate font-medium text-zinc-100">{option.name}</p>
           <p className="text-xs text-zinc-500">
             {option.category}
-            {option.isEmergencyFacility && (
-              <span className="text-rose-300/80"> &middot; Emergency facility</span>
-            )}
           </p>
         </div>
       </div>
@@ -319,6 +325,8 @@ export function SafePlaceModal({
   const result = state.kind === "ready" ? state.result : null;
   const verified = result?.verified ?? [];
   const nearby = result?.nearby ?? [];
+  const emergencyFacilities = nearby.filter((option) => option.isEmergencyFacility);
+  const ordinaryPlaces = nearby.filter((option) => !option.isEmergencyFacility);
 
   return (
     <div
@@ -430,9 +438,38 @@ export function SafePlaceModal({
 
               <section>
                 <SectionHeading
+                  title="Official emergency facilities"
+                  subtitle="Mapped by OpenStreetMap. Not physically verified by LOG POSE."
+                  count={result.nearby === null ? undefined : emergencyFacilities.length}
+                />
+
+                {result.nearby === null ? (
+                  <p className="rounded-xl border border-white/8 bg-white/[0.02] px-3.5 py-3 text-xs leading-relaxed text-zinc-400">
+                    {result.nearbyWarning ??
+                      "Nearby establishments could not be listed right now."}
+                  </p>
+                ) : emergencyFacilities.length === 0 ? (
+                  <p className="rounded-xl border border-white/8 bg-white/[0.02] px-3.5 py-3 text-xs leading-relaxed text-zinc-400">
+                    No mapped emergency facilities are available nearby.
+                  </p>
+                ) : (
+                  <ul className="space-y-2.5">
+                    {emergencyFacilities.map((option) => (
+                      <NearbyCard
+                        key={option.id}
+                        option={option}
+                        onNavigate={onNavigate}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </section>
+
+              <section>
+                <SectionHeading
                   title="Other places nearby"
-                  subtitle="From OpenStreetMap. Not checked by LOG POSE."
-                  count={result.nearby === null ? undefined : nearby.length}
+                  subtitle="Ordinary OpenStreetMap businesses. Not checked by LOG POSE."
+                  count={result.nearby === null ? undefined : ordinaryPlaces.length}
                 />
 
                 <div className="mb-3 flex gap-2.5 rounded-xl border border-amber-400/25 bg-amber-400/8 px-3.5 py-2.5">
@@ -440,9 +477,8 @@ export function SafePlaceModal({
                     &#9888;
                   </span>
                   <p className="text-[11px] leading-relaxed text-amber-100/90">
-                    These are ordinary businesses listed on OpenStreetMap. Nobody has
-                    visited them, they have no Trust Score, and they have not agreed to
-                    help. Prefer a verified Safe Haven whenever one is available.
+                    These places are listed from OpenStreetMap only. Nobody has visited
+                    them, they have no Trust Score, and they have not agreed to help.
                   </p>
                 </div>
 
@@ -451,14 +487,13 @@ export function SafePlaceModal({
                     {result.nearbyWarning ??
                       "Nearby establishments could not be listed right now."}
                   </p>
-                ) : nearby.length === 0 ? (
+                ) : ordinaryPlaces.length === 0 ? (
                   <p className="rounded-xl border border-white/8 bg-white/[0.02] px-3.5 py-3 text-xs leading-relaxed text-zinc-400">
-                    No open or unknown-hours establishments are mapped close by. Places
-                    OpenStreetMap says are currently closed are not listed.
+                    No ordinary open or unknown-hours establishments are mapped close by.
                   </p>
                 ) : (
                   <ul className="space-y-2.5">
-                    {nearby.map((option) => (
+                    {ordinaryPlaces.map((option) => (
                       <NearbyCard
                         key={option.id}
                         option={option}

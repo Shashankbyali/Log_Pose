@@ -21,7 +21,7 @@ import type {
 
 export const DEFAULT_SAFETY_WEIGHTS: SafetyWeights = {
   lighting: 0.25,
-  activity: 0.2,
+  activity: 0.15,
   safeHaven: 0.2,
   establishment: 0.15,
   accessibility: 0.1,

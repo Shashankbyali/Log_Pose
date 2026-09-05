@@ -42,6 +42,22 @@ export function UnverifiedBadge({ className }: { className?: string }) {
   );
 }
 
+export function EmergencyAccessBadge({ className }: { className?: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center gap-1.5 rounded-md border border-rose-400/35 bg-rose-400/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-rose-300",
+        className,
+      )}
+    >
+      <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M12 2.5l2.9 6.1 6.6.9-4.8 4.6 1.2 6.6L12 17.6l-5.9 3.1 1.2-6.6L2.5 9.5l6.6-.9z" />
+      </svg>
+      Emergency access
+    </span>
+  );
+}
+
 const OPEN_STATE_STYLE: Record<OpenState, string> = {
   open: "border-emerald-400/30 bg-emerald-400/10 text-emerald-300",
   closed: "border-rose-400/30 bg-rose-400/10 text-rose-300",

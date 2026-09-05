@@ -99,6 +99,19 @@ export function categorySuitability(category: string): number | null {
   return CATEGORY_SUITABILITY[normaliseCategory(category)] ?? null;
 }
 
+export function sortByWalkingEta<
+  T extends { walkingDurationSeconds: number | null; rankScore: number },
+>(options: T[]): T[] {
+  return [...options].sort((a, b) => {
+    if (a.walkingDurationSeconds !== null && b.walkingDurationSeconds !== null) {
+      return a.walkingDurationSeconds - b.walkingDurationSeconds || b.rankScore - a.rankScore;
+    }
+    if (a.walkingDurationSeconds !== null) return -1;
+    if (b.walkingDurationSeconds !== null) return 1;
+    return b.rankScore - a.rankScore;
+  });
+}
+
 /**
  * Ranks unverified OpenStreetMap establishments as a fallback for the
  * "I need a safe place" flow. Pure and client-safe.

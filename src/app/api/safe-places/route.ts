@@ -5,11 +5,18 @@ import {
   categoryLabel,
   describeOverpassFailure,
   displayName,
+  addressOf,
+  emergencyFacilityType,
   fetchNearbyShelterCandidates,
   isEmergencyFacility,
+  phoneOf,
 } from "@/lib/overpass";
 import { fetchWalkingRoutes } from "@/lib/routing";
-import { rankNearbyPlaces, rankSafePlaces } from "@/lib/safePlaceRanking";
+import {
+  rankNearbyPlaces,
+  rankSafePlaces,
+  sortByWalkingEta,
+} from "@/lib/safePlaceRanking";
 import { getVerifiedSafeHavens } from "@/lib/safeHavens";
 import type {
   LatLng,
@@ -166,7 +173,10 @@ export async function POST(request: NextRequest) {
       longitude: point.lng,
       openState: resolveOpenState(point.tags.opening_hours, now),
       openingHoursRaw: point.tags.opening_hours ?? null,
+      address: addressOf(point.tags),
+      phone: phoneOf(point.tags),
       isEmergencyFacility: isEmergencyFacility(point.tags),
+      officialFacilityType: emergencyFacilityType(point.tags),
     }));
     nearby = rankNearbyPlaces(userLocation, places, NEARBY_RADIUS_METERS);
   }
@@ -185,10 +195,15 @@ export async function POST(request: NextRequest) {
     ? await withWalkingRoutes(userLocation, nearby, nearbyBudget)
     : null;
 
+  const orderedVerified = verifiedWithWalking
+    ? sortByWalkingEta(verifiedWithWalking)
+    : null;
+  const orderedNearby = nearbyWithWalking ? sortByWalkingEta(nearbyWithWalking) : null;
+
   const payload: SafePlaceSearchResult = {
-    verified: verifiedWithWalking,
+    verified: orderedVerified,
     verifiedWarning: network.havens === null ? network.warning : null,
-    nearby: nearbyWithWalking,
+    nearby: orderedNearby,
     nearbyWarning:
       osmCandidates === null
         ? `${nearbyLookup.failure ?? "OpenStreetMap could not be reached"}, so nearby establishments could not be listed. Try again in a moment.`

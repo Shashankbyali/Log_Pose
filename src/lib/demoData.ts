@@ -270,8 +270,11 @@ export const DEMO_OSM_PLACES: OsmPlace[] = [
     longitude: 77.5968,
     openState: "open",
     openingHoursRaw: "Mo-Su 08:00-22:30",
+    address: null,
+    phone: null,
     distanceFromRoute: 40,
     isEmergencyFacility: false,
+    officialFacilityType: null,
   },
   {
     id: "demo-osm-2",
@@ -281,8 +284,11 @@ export const DEMO_OSM_PLACES: OsmPlace[] = [
     longitude: 77.6028,
     openState: "unknown",
     openingHoursRaw: null,
+    address: null,
+    phone: null,
     distanceFromRoute: 55,
     isEmergencyFacility: false,
+    officialFacilityType: null,
   },
   {
     id: "demo-osm-3",
@@ -292,8 +298,11 @@ export const DEMO_OSM_PLACES: OsmPlace[] = [
     longitude: 77.6051,
     openState: "unknown",
     openingHoursRaw: null,
+    address: null,
+    phone: null,
     distanceFromRoute: 90,
     isEmergencyFacility: true,
+    officialFacilityType: "police",
   },
   {
     id: "demo-osm-4",
@@ -303,8 +312,11 @@ export const DEMO_OSM_PLACES: OsmPlace[] = [
     longitude: 77.5959,
     openState: "closed",
     openingHoursRaw: "Mo-Sa 07:00-13:00",
+    address: null,
+    phone: null,
     distanceFromRoute: 30,
     isEmergencyFacility: false,
+    officialFacilityType: null,
   },
 ];
 

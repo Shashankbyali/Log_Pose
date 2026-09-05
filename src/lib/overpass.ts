@@ -1,5 +1,9 @@
 import { boundingBoxOf, haversineMeters } from "./geo";
-import type { BoundingBox, LatLng } from "./types";
+import type {
+  BoundingBox,
+  LatLng,
+  OfficialEmergencyFacilityType,
+} from "./types";
 
 /**
  * Server-side OpenStreetMap data access via the Overpass API.
@@ -14,6 +18,7 @@ const OVERPASS_ENDPOINTS = [
   "https://overpass-api.de/api/interpreter",
   "https://overpass.kumi.systems/api/interpreter",
   "https://overpass.private.coffee/api/interpreter",
+  "https://overpass.openstreetmap.fr/api/interpreter",
 ].filter((value): value is string => Boolean(value));
 
 const OVERPASS_TIMEOUT_MS = 22000;
@@ -50,14 +55,6 @@ const ACTIVITY_AMENITIES = [
   "car_wash",
   "parking",
 ];
-
-const EMERGENCY_AMENITIES = new Set([
-  "hospital",
-  "clinic",
-  "doctors",
-  "police",
-  "fire_station",
-]);
 
 const PEDESTRIAN_HIGHWAYS = ["footway", "pedestrian", "path", "steps", "living_street"];
 
@@ -165,6 +162,7 @@ async function postOverpass(
 async function runOverpassQuery(
   query: string,
   timeoutMs = OVERPASS_TIMEOUT_MS,
+  raceMirrors = false,
 ): Promise<RawElement[]> {
   const now = Date.now();
 
@@ -175,6 +173,30 @@ async function runOverpassQuery(
     (endpoint) => (unhealthyUntil.get(endpoint) ?? 0) <= now,
   );
   const endpoints = healthy.length > 0 ? healthy : OVERPASS_ENDPOINTS;
+
+  if (raceMirrors) {
+    const attempts = endpoints.map(async (endpoint) => {
+      try {
+        const response = await postOverpass(endpoint, query, timeoutMs);
+        if (!response.ok) {
+          throw new Error(`Overpass ${endpoint} responded ${response.status}`);
+        }
+
+        unhealthyUntil.delete(endpoint);
+        const data = (await response.json()) as { elements?: RawElement[] };
+        return data.elements ?? [];
+      } catch (error) {
+        unhealthyUntil.set(endpoint, Date.now() + UNHEALTHY_COOLDOWN_MS);
+        throw error;
+      }
+    });
+
+    try {
+      return await Promise.any(attempts);
+    } catch {
+      throw new Error("All Overpass endpoints failed");
+    }
+  }
 
   let lastError: unknown = null;
 
@@ -236,10 +258,25 @@ function isActivityPoi(tags: Record<string, string>): boolean {
 }
 
 export function isEmergencyFacility(tags: Record<string, string>): boolean {
-  if (tags.amenity && EMERGENCY_AMENITIES.has(tags.amenity)) return true;
-  if (tags.emergency === "ambulance_station") return true;
-  if (tags.healthcare === "hospital" || tags.healthcare === "emergency") return true;
-  return false;
+  return emergencyFacilityType(tags) !== null;
+}
+
+export function emergencyFacilityType(
+  tags: Record<string, string>,
+): OfficialEmergencyFacilityType | null {
+  if (tags.amenity === "police") return "police";
+  if (tags.amenity === "hospital" || tags.healthcare === "hospital") return "hospital";
+  if (tags.amenity === "fire_station") return "fire_station";
+  if (
+    tags.amenity === "clinic" ||
+    tags.amenity === "doctors" ||
+    tags.healthcare === "clinic" ||
+    tags.healthcare === "emergency"
+  ) {
+    return "clinic";
+  }
+  if (tags.emergency === "ambulance_station") return "hospital";
+  return null;
 }
 
 /**
@@ -379,6 +416,7 @@ export async function fetchNearbyShelterCandidates(
   const elements = await runOverpassQuery(
     buildAroundQuery(center, radiusMeters),
     OVERPASS_URGENT_TIMEOUT_MS,
+    true,
   );
   const points: OverpassPoint[] = [];
 
@@ -475,6 +513,20 @@ export function categoryLabel(tags: Record<string, string>): string {
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
     .join(" ");
+}
+
+export function addressOf(tags: Record<string, string>): string | null {
+  const parts = [
+    tags["addr:housenumber"],
+    tags["addr:street"],
+    tags["addr:suburb"],
+    tags["addr:city"],
+  ].filter(Boolean);
+  return parts.length > 0 ? parts.join(", ") : tags["addr:full"] ?? null;
+}
+
+export function phoneOf(tags: Record<string, string>): string | null {
+  return tags.phone ?? tags["contact:phone"] ?? null;
 }
 
 export function displayName(tags: Record<string, string>): string {

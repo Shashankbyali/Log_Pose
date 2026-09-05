@@ -7,6 +7,8 @@ import { MapWrapper } from "./MapWrapper";
 import { DemoModeBanner } from "./ModeBadge";
 import { RouteComparisonCards } from "./RouteComparisonCards";
 import { SafeHavenDetail } from "./SafeHavenDetail";
+import { EmergencyFacilityDetail } from "./EmergencyFacilityDetail";
+import { EmergencyModePanel } from "./EmergencyModePanel";
 import { SafePlaceModal, type NavigationTarget } from "./SafePlaceModal";
 import { SafetyPreferenceSelector } from "./SafetyPreferenceSelector";
 import { SafetyScorePanel } from "./SafetyScorePanel";
@@ -21,6 +23,7 @@ import {
   DEMO_SAFE_HAVENS,
   getDemoPlan,
 } from "@/lib/demoData";
+import { haversineMeters } from "@/lib/geo";
 import { getRecommendedRoute } from "@/lib/routing";
 import { getSafetyTradeoff } from "@/lib/utils";
 import { useGeolocation } from "@/lib/useGeolocation";
@@ -29,6 +32,9 @@ import type {
   LatLng,
   PlanResult,
   SafetyPreference,
+  OsmPlace,
+  SafePlaceSearchResult,
+  NearbyPlaceOption,
   VerifiedSafeHaven,
 } from "@/lib/types";
 
@@ -52,7 +58,10 @@ export default function LogPoseApp() {
   const [originMode, setOriginMode] = useState<"auto" | "manual">("auto");
   const [selectedRouteId, setSelectedRouteId] = useState("");
   const [selectedHaven, setSelectedHaven] = useState<VerifiedSafeHaven | null>(null);
+  const [selectedEmergencyFacility, setSelectedEmergencyFacility] =
+    useState<OsmPlace | null>(null);
   const [showSafePlace, setShowSafePlace] = useState(false);
+  const [showEmergencyMode, setShowEmergencyMode] = useState(false);
   const [safeWalkRequest, setSafeWalkRequest] = useState<SafeWalkRequest | null>(null);
   const [showOsmPlaces, setShowOsmPlaces] = useState(true);
   const [panelOpen, setPanelOpen] = useState(true);
@@ -187,6 +196,7 @@ export default function LogPoseApp() {
 
     setShowSafePlace(false);
     setSelectedHaven(null);
+    setSelectedEmergencyFacility(null);
 
     if (trip.plan.mode === "demo") {
       // Demo Mode has no live routing, so say so instead of silently doing
@@ -212,6 +222,66 @@ export default function LogPoseApp() {
       destinationName: target.name,
       destinationKind: target.kind,
       safeHavenId: target.safeHavenId,
+    });
+  };
+
+  const handleEmergencyFacilitySelect = async (place: OsmPlace) => {
+    setSelectedHaven(null);
+    setSelectedEmergencyFacility(place);
+
+    try {
+      const response = await fetch("/api/safe-places", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ location: trip?.origin }),
+      });
+      if (!response.ok) return;
+      const result = (await response.json()) as SafePlaceSearchResult;
+      const match = result.nearby?.find((option) => option.id === place.id);
+      if (match) {
+        setSelectedEmergencyFacility({
+          ...place,
+          distanceFromUserMeters: Math.round(
+            haversineMeters(trip!.origin, {
+              lat: place.latitude,
+              lng: place.longitude,
+            }),
+          ),
+          walkingDistanceMeters: match.walkingDistanceMeters,
+          walkingDurationSeconds: match.walkingDurationSeconds,
+        });
+      }
+    } catch {
+      // The detail remains useful without routing data and says ETA unavailable.
+    }
+
+    setSelectedEmergencyFacility((current) =>
+      current
+        ? {
+            ...current,
+            distanceFromUserMeters: Math.round(
+              haversineMeters(trip!.origin, {
+                lat: place.latitude,
+                lng: place.longitude,
+              }),
+            ),
+          }
+        : current,
+    );
+  };
+
+  const handleEmergencyNavigate = (
+    place: NearbyPlaceOption,
+    walkingDurationSeconds: number | null,
+  ) => {
+    void walkingDurationSeconds;
+    setShowEmergencyMode(false);
+    handleNavigateTo({
+      lat: place.latitude,
+      lng: place.longitude,
+      name: place.name,
+      kind: "osm_place",
+      safeHavenId: null,
     });
   };
 
@@ -268,6 +338,7 @@ export default function LogPoseApp() {
             osmPlaces={trip.plan.osmPlaces}
             showOsmPlaces={showOsmPlaces}
             onHavenSelect={setSelectedHaven}
+            onEmergencyFacilitySelect={handleEmergencyFacilitySelect}
             className="h-full w-full"
           />
 
@@ -303,6 +374,17 @@ export default function LogPoseApp() {
               aria-hidden="true"
             />
             I need a safe place
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              setShowEmergencyMode(true);
+              geo.requestLocation();
+            }}
+            className="lp-focus absolute bottom-4 right-4 z-[1000] rounded-full border border-rose-300/40 bg-rose-600 px-3 py-2.5 text-xs font-bold uppercase tracking-wider text-white shadow-xl shadow-rose-950/50 transition hover:bg-rose-500"
+          >
+            Emergency
           </button>
         </div>
 
@@ -449,6 +531,24 @@ export default function LogPoseApp() {
             />
           </div>
         )}
+
+        {selectedEmergencyFacility && (
+          <div className="absolute inset-x-4 bottom-4 z-[1500] mx-auto max-w-sm lg:inset-x-auto lg:left-4 lg:top-20 lg:bottom-auto">
+            <EmergencyFacilityDetail
+              place={selectedEmergencyFacility}
+              onClose={() => setSelectedEmergencyFacility(null)}
+              onNavigate={() =>
+                handleNavigateTo({
+                  lat: selectedEmergencyFacility.latitude,
+                  lng: selectedEmergencyFacility.longitude,
+                  name: selectedEmergencyFacility.name,
+                  kind: "osm_place",
+                  safeHavenId: null,
+                })
+              }
+            />
+          </div>
+        )}
       </div>
 
       {error && (
@@ -469,6 +569,16 @@ export default function LogPoseApp() {
           demoNearbyPlaces={isDemo ? DEMO_OSM_PLACES : null}
           onClose={() => setShowSafePlace(false)}
           onNavigate={handleNavigateTo}
+        />
+      )}
+
+      {showEmergencyMode && (
+        <EmergencyModePanel
+          location={geo.location}
+          locationStatus={geo.status}
+          locationError={geo.error}
+          onClose={() => setShowEmergencyMode(false)}
+          onNavigate={handleEmergencyNavigate}
         />
       )}
 

@@ -61,12 +61,22 @@ const osmPlaceIcon = L.divIcon({
   iconAnchor: [6, 6],
 });
 
-const osmEmergencyIcon = L.divIcon({
-  className: "",
-  html: `<div style="width:14px;height:14px;border-radius:3px;background:#7f1d1d;border:1.5px solid #fca5a5;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`,
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
-});
+function emergencyIcon(placeType: string | null) {
+  const symbol =
+    placeType === "police"
+      ? "✦"
+      : placeType === "hospital"
+        ? "+"
+        : placeType === "fire_station"
+          ? "♢"
+          : "✚";
+  return L.divIcon({
+    className: "",
+    html: `<div style="width:30px;height:30px;border-radius:10px;background:linear-gradient(160deg,#be123c,#7f1d1d);border:2px solid #fda4af;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(0,0,0,.45);color:#fff1f2;font-size:17px;font-weight:700">${symbol}</div>`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 15],
+  });
+}
 
 function FitBounds({ points }: { points: LatLng[] }) {
   const map = useMap();
@@ -93,6 +103,7 @@ interface LogPoseMapProps {
   osmPlaces: OsmPlace[];
   showOsmPlaces: boolean;
   onHavenSelect: (haven: VerifiedSafeHaven) => void;
+  onEmergencyFacilitySelect: (place: OsmPlace) => void;
   className?: string;
 }
 
@@ -105,6 +116,7 @@ export default function LogPoseMap({
   osmPlaces,
   showOsmPlaces,
   onHavenSelect,
+  onEmergencyFacilitySelect,
   className,
 }: LogPoseMapProps) {
   const boundsPoints = useMemo(
@@ -193,11 +205,25 @@ export default function LogPoseMap({
             <Marker
               key={place.id}
               position={[place.latitude, place.longitude]}
-              icon={place.isEmergencyFacility ? osmEmergencyIcon : osmPlaceIcon}
-              zIndexOffset={-200}
+              icon={
+                place.isEmergencyFacility
+                  ? emergencyIcon(place.officialFacilityType)
+                  : osmPlaceIcon
+              }
+              zIndexOffset={place.isEmergencyFacility ? 250 : -200}
+              eventHandlers={
+                place.isEmergencyFacility
+                  ? { click: () => onEmergencyFacilitySelect(place) }
+                  : undefined
+              }
             >
               <Popup>
                 <div className="min-w-[180px] text-sm">
+                  {place.isEmergencyFacility && (
+                    <p className="text-[11px] font-semibold uppercase tracking-wider text-rose-300">
+                      Official Emergency Facility
+                    </p>
+                  )}
                   <p className="font-semibold">{place.name}</p>
                   <p className="text-zinc-400">{place.category}</p>
                   {place.distanceFromRoute !== undefined && (
@@ -205,9 +231,14 @@ export default function LogPoseMap({
                   )}
                   <p className="text-zinc-400">{describeOpenState(place.openState)}</p>
                   <p className="mt-1.5 border-t border-zinc-700 pt-1.5 text-[11px] text-zinc-500">
-                    Source: OpenStreetMap
+                    Source: OpenStreetMap /{" "}
+                    {place.isEmergencyFacility
+                      ? "Official Emergency Facility"
+                      : "Not LOG POSE Verified"}
                     <br />
-                    Not LOG POSE Verified
+                    {place.isEmergencyFacility
+                      ? "Not physically verified by LOG POSE"
+                      : "Not LOG POSE Verified"}
                   </p>
                 </div>
               </Popup>

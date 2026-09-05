@@ -82,6 +82,7 @@ export function HomeScreen({
                   type="button"
                   onClick={onUseCurrentLocation}
                   disabled={loading || geoStatus === "requesting"}
+                  suppressHydrationWarning
                   className="rounded-lg border border-white/15 px-2.5 py-1.5 text-xs text-zinc-200 transition hover:bg-white/5 disabled:opacity-50"
                 >
                   {geoStatus === "requesting"
@@ -133,6 +134,7 @@ export function HomeScreen({
           <button
             type="submit"
             disabled={loading || !destination || !origin}
+            suppressHydrationWarning
             className="lp-focus flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-teal-400 to-teal-500 py-3.5 text-base font-semibold text-zinc-950 shadow-lg shadow-teal-950/40 transition hover:from-teal-300 hover:to-teal-400 disabled:cursor-not-allowed disabled:from-zinc-700 disabled:to-zinc-700 disabled:text-zinc-400 disabled:shadow-none"
           >
             {loading && (
@@ -155,6 +157,7 @@ export function HomeScreen({
             type="button"
             onClick={onDemo}
             disabled={loading}
+            suppressHydrationWarning
             className="w-full rounded-xl border border-amber-400/25 bg-amber-400/5 py-3 text-sm font-medium text-amber-200 transition hover:bg-amber-400/10 disabled:opacity-50"
           >
             Try Demo Mode

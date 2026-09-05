@@ -11,6 +11,12 @@ export type DataMode = "live" | "demo";
 
 export type OpenState = "open" | "closed" | "unknown";
 
+export type OfficialEmergencyFacilityType =
+  | "police"
+  | "hospital"
+  | "fire_station"
+  | "clinic";
+
 export const SAFE_HAVEN_TYPES = [
   "Pharmacy",
   "Hospital",
@@ -165,8 +171,14 @@ export interface OsmPlace {
   longitude: number;
   openState: OpenState;
   openingHoursRaw: string | null;
+  address: string | null;
+  phone: string | null;
+  walkingDistanceMeters?: number | null;
+  walkingDurationSeconds?: number | null;
+  distanceFromUserMeters?: number;
   distanceFromRoute?: number;
   isEmergencyFacility: boolean;
+  officialFacilityType: OfficialEmergencyFacilityType | null;
 }
 
 /** A physically verified LOG POSE Safe Haven. */
@@ -269,7 +281,10 @@ export interface NearbyPlace {
   longitude: number;
   openState: OpenState;
   openingHoursRaw: string | null;
+  address: string | null;
+  phone: string | null;
   isEmergencyFacility: boolean;
+  officialFacilityType: OfficialEmergencyFacilityType | null;
 }
 
 export interface NearbyPlaceOption extends NearbyPlace {
@@ -290,6 +305,18 @@ export interface PoliceStationSnapshot {
   lng: number;
   /** From OSM tags when mapped. LOG POSE never invents a number. */
   phone: string | null;
+}
+
+export interface EmergencySearchResult {
+  location: LatLng;
+  police: (PoliceStationSnapshot & {
+    distanceMeters: number;
+    walkingDistanceMeters: number | null;
+    walkingDurationSeconds: number | null;
+    address: string | null;
+  }) | null;
+  facilities: Array<NearbyPlaceOption & { address: string | null; phone: string | null }>;
+  warning: string | null;
 }
 
 /**

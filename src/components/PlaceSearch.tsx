@@ -17,6 +17,7 @@ interface PlaceSearchProps {
 
 const DEBOUNCE_MS = 450;
 const MIN_QUERY_LENGTH = 3;
+const RETRY_DELAY_MS = 900;
 
 /**
  * Real place search backed by Nominatim through our API route. Used for both
@@ -57,30 +58,41 @@ export function PlaceSearch({
       setState("searching");
       setErrorMessage(null);
 
-      try {
-        const response = await fetch(
-          `/api/geocode?q=${encodeURIComponent(trimmed)}`,
-          { signal: controller.signal },
-        );
-        const data = (await response.json()) as {
-          results?: GeocodeResult[];
-          error?: string;
-        };
+      for (let attempt = 0; attempt < 2; attempt++) {
+        try {
+          const response = await fetch(
+            `/api/geocode?q=${encodeURIComponent(trimmed)}`,
+            { signal: controller.signal },
+          );
+          const data = (await response.json()) as {
+            results?: GeocodeResult[];
+            error?: string;
+          };
 
-        if (!response.ok) {
-          setState("error");
-          setErrorMessage(data.error ?? "Destination search is unavailable.");
-          setResults([]);
+          if (!response.ok) {
+            if (attempt === 0 && (response.status === 502 || response.status === 503)) {
+              await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+              continue;
+            }
+            setState("error");
+            setErrorMessage(data.error ?? "Destination search is unavailable.");
+            setResults([]);
+            return;
+          }
+
+          setResults(data.results ?? []);
+          setState("done");
           return;
+        } catch (error) {
+          if ((error as Error).name === "AbortError") return;
+          if (attempt === 0) {
+            await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
+            continue;
+          }
+          setState("error");
+          setErrorMessage("Destination search is unavailable. Try again.");
+          setResults([]);
         }
-
-        setResults(data.results ?? []);
-        setState("done");
-      } catch (error) {
-        if ((error as Error).name === "AbortError") return;
-        setState("error");
-        setErrorMessage("Destination search is unavailable. Check your connection.");
-        setResults([]);
       }
     }, DEBOUNCE_MS);
 
@@ -131,6 +143,7 @@ export function PlaceSearch({
         placeholder={placeholder}
         autoComplete="off"
         aria-describedby={`${listId}-status`}
+        suppressHydrationWarning
         className="w-full rounded-xl border border-white/10 bg-black/30 px-4 py-3.5 text-white transition placeholder:text-zinc-500 focus:border-teal-400/50 focus:bg-black/45 focus:outline-none focus:ring-2 focus:ring-teal-400/20 disabled:opacity-50"
       />
 

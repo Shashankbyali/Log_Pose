@@ -4,7 +4,14 @@ import {
   polylineLengthMeters,
 } from "./geo";
 import { resolveOpenState, type ClockNow } from "./openingHours";
-import { categoryLabel, displayName, type OsmSnapshot } from "./overpass";
+import {
+  addressOf,
+  categoryLabel,
+  displayName,
+  emergencyFacilityType,
+  phoneOf,
+  type OsmSnapshot,
+} from "./overpass";
 import type {
   LatLng,
   OsmPlace,
@@ -211,7 +218,10 @@ export function osmPlacesNearRoute(
       longitude: poi.lng,
       openState: resolveOpenState(poi.tags.opening_hours, now),
       openingHoursRaw: poi.tags.opening_hours ?? null,
+      address: addressOf(poi.tags),
+      phone: phoneOf(poi.tags),
       distanceFromRoute: Math.round(distance),
-      isEmergencyFacility: snapshot.emergencyFacilities.some((f) => f.id === poi.id),
+      isEmergencyFacility: emergencyFacilityType(poi.tags) !== null,
+      officialFacilityType: emergencyFacilityType(poi.tags),
     }));
 }
